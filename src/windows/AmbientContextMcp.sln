@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp.Core", "AmbientContextMcp.Core\AmbientContextMcp.Core.csproj", "{376CB1A9-760D-41C8-8B0C-ADFE7F921E37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp", "AmbientContextMcp\AmbientContextMcp.csproj", "{1457A854-4310-4BE4-A1C1-BB554CEF98FC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{376CB1A9-760D-41C8-8B0C-ADFE7F921E37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{376CB1A9-760D-41C8-8B0C-ADFE7F921E37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{376CB1A9-760D-41C8-8B0C-ADFE7F921E37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{376CB1A9-760D-41C8-8B0C-ADFE7F921E37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
