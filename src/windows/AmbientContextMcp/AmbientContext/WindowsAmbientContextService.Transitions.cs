@@ -147,13 +147,15 @@ public sealed partial class WindowsAmbientContextService
 
         if (!string.IsNullOrWhiteSpace(key))
         {
+            // event 本体は medium (タイミング信号 + 再生元アプリ程度)。
+            // title / artist は AmbientTransmissionPolicy の payload key 単位フィルタで個別判定される。
             AddEvent("media_session_changed", new Dictionary<string, string>
             {
                 ["source_app"] = media.SourceAppUserModelId,
                 ["playback_status"] = media.PlaybackStatus,
                 ["title"] = media.Title,
                 ["artist"] = media.Artist
-            }, "high");
+            }, "medium");
         }
 
         _lastMediaKey = key;

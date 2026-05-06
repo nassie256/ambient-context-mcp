@@ -77,6 +77,7 @@ Ambient Context MCP は OS から取得したコンテキストを path 単位�
 | `media.sourceAppUserModelId` | medium | 再生元アプリ |
 | `media.positionMilliseconds` | medium | 視聴行動 |
 | `events.media_playback_started` / `_paused` / `_stopped` / `_status_changed` | medium | 再生イベント |
+| `events.media_session_changed` | medium | 曲が変わった瞬間のタイミング信号 (payload の title/artist は別 path で個別 opt-in) |
 | `system.timeZoneId` | medium | 地域推定 |
 | `display.count` | medium | 外部ディスプレイ有無 |
 | `displays` | medium | 構成情報 |
@@ -92,4 +93,5 @@ Ambient Context MCP は OS から取得したコンテキストを path 単位�
 | `media.artist` | high | 嗜好情報 |
 | `media.albumTitle` | high | 嗜好情報 |
 | `media.sessions` | high | 複数アプリのタイトル |
-| `events.media_session_changed` | high | メディアタイトル含む |
+| `events.media_session_changed.title` | high | 曲名・動画名・配信タイトル (payload key 単位 opt-in) |
+| `events.media_session_changed.artist` | high | アーティスト/出演者 (payload key 単位 opt-in) |

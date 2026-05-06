@@ -1,6 +1,6 @@
 # MCP クライアント設定例
 
-Ambient Context MCP は Streamable HTTP transport で動作します。`http://127.0.0.1:37680/mcp` に Bearer トークン付きで接続してください。
+Ambient Context MCP は Streamable HTTP transport で動作します。`http://127.0.0.1:37690/mcp` に Bearer トークン付きで接続してください。
 
 ## トークンの取得
 
@@ -10,7 +10,7 @@ Ambient Context MCP は Streamable HTTP transport で動作します。`http://1
 
 ```bash
 claude mcp add ambient-context \
-  --transport http http://127.0.0.1:37680/mcp \
+  --transport http http://127.0.0.1:37690/mcp \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
@@ -18,7 +18,7 @@ claude mcp add ambient-context \
 
 ```bash
 claude mcp list
-# ambient-context: http://127.0.0.1:37680/mcp (HTTP) - ✓ Connected
+# ambient-context: http://127.0.0.1:37690/mcp (HTTP) - ✓ Connected
 ```
 
 ## Claude Desktop
@@ -30,7 +30,7 @@ claude mcp list
   "mcpServers": {
     "ambient-context": {
       "type": "http",
-      "url": "http://127.0.0.1:37680/mcp",
+      "url": "http://127.0.0.1:37690/mcp",
       "headers": {
         "Authorization": "Bearer <TOKEN>"
       }
@@ -48,7 +48,7 @@ Streamable HTTP のみ提供のため、stdio 専用クライアントには **s
 ツール一覧の確認:
 
 ```bash
-curl -X POST http://127.0.0.1:37680/mcp \
+curl -X POST http://127.0.0.1:37690/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "Authorization: Bearer <TOKEN>" \
@@ -58,7 +58,7 @@ curl -X POST http://127.0.0.1:37680/mcp \
 現在の状態取得:
 
 ```bash
-curl -X POST http://127.0.0.1:37680/mcp \
+curl -X POST http://127.0.0.1:37690/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "Authorization: Bearer <TOKEN>" \
@@ -71,7 +71,7 @@ curl -X POST http://127.0.0.1:37680/mcp \
 ポリシー診断 (どの項目がなぜ送信されないかの説明):
 
 ```bash
-curl -X POST http://127.0.0.1:37680/mcp \
+curl -X POST http://127.0.0.1:37690/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "Authorization: Bearer <TOKEN>" \
