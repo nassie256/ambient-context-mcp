@@ -19,4 +19,8 @@ public interface ISettingsStore
     SettingsWindowStatus? LoadSettingsWindowStatus();
 
     void SaveSettingsWindowStatus(SettingsWindowStatus status);
+
+    UiSettings LoadUiSettings();
+
+    void SaveUiSettings(UiSettings settings);
 }

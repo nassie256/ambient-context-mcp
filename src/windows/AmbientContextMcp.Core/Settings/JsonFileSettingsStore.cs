@@ -76,6 +76,16 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         Save(current => current.SettingsWindow = status);
     }
 
+    public UiSettings LoadUiSettings()
+    {
+        return Load().Ui ?? new UiSettings();
+    }
+
+    public void SaveUiSettings(UiSettings settings)
+    {
+        Save(current => current.Ui = settings);
+    }
+
     public static string GetDefaultPath()
     {
         return Path.Combine(
@@ -145,5 +155,7 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         public LocalContextSettings? LocalContext { get; set; }
 
         public SettingsWindowStatus? SettingsWindow { get; set; }
+
+        public UiSettings? Ui { get; set; }
     }
 }

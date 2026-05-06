@@ -12,6 +12,7 @@ using AmbientContextMcp.Core.Hub;
 using AmbientContextMcp.Core.Policy;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Mcp;
+using AmbientContextMcp.Resources;
 
 namespace AmbientContextMcp.Settings;
 
@@ -44,6 +45,8 @@ public partial class SettingsWindow : Window
 
         LoadTransmissionSettings();
         LoadLocalContextSettings();
+        LoadUiSettings();
+        _initialLanguage = GetSelectedLanguage();
         RefreshSelectAllTransmissionCheckBox();
         McpAutoStartCheckBox.IsChecked = _autostart.IsEnabled();
         McpPortBox.Text = _mcpHost.Settings.Port.ToString(CultureInfo.InvariantCulture);
@@ -51,6 +54,8 @@ public partial class SettingsWindow : Window
 
         SourceInitialized += (_, _) => RestoreWindowStatus();
     }
+
+    private string _initialLanguage = "";
 
     protected override void OnClosing(CancelEventArgs e)
     {
@@ -79,13 +84,15 @@ public partial class SettingsWindow : Window
         SaveMcpSettings();
         SaveTransmissionSettings();
         SaveLocalContextSettings();
+        SaveUiSettings();
         ApplyAutostart();
 
         _collector.ReloadTransmissionPolicy();
         _hub.ReloadSettings();
         _mcpHost.ReloadSettings();
 
-        SettingsStatusText.Text = "保存しました。送信設定は次回の文脈更新から反映されます。ポート変更はアプリ再起動後に有効になります。";
+        var languageChanged = !string.Equals(GetSelectedLanguage(), _initialLanguage, StringComparison.OrdinalIgnoreCase);
+        SettingsStatusText.Text = languageChanged ? Strings.StatusSavedNeedsRestart : Strings.StatusSaved;
         RefreshMcpStatus();
     }
 
@@ -111,12 +118,15 @@ public partial class SettingsWindow : Window
             $"--transport http {_mcpHost.McpUrl} " +
             $"--header \"Authorization: Bearer {_mcpHost.Token}\"";
         SafeCopy(snippet);
-        SettingsStatusText.Text = "Claude Code 用のコマンドをクリップボードにコピーしました。";
+        SettingsStatusText.Text = Strings.StatusClaudeCodeCopied;
     }
 
     private void RefreshMcpStatus()
     {
-        McpStatusText.Text = $"起動中 :{_mcpHost.Settings.Port}";
+        McpStatusText.Text = string.Format(
+            CultureInfo.InvariantCulture,
+            Strings.StatusMcpRunningFormat,
+            _mcpHost.Settings.Port);
         McpEndpointBox.Text = _mcpHost.McpUrl;
         McpTokenBox.Text = _mcpHost.Token;
     }
@@ -208,6 +218,36 @@ public partial class SettingsWindow : Window
         });
     }
 
+    private void LoadUiSettings()
+    {
+        var settings = _settingsStore.LoadUiSettings();
+        var target = settings.Language ?? "";
+        foreach (var item in UiLanguageBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString() ?? "", target, StringComparison.OrdinalIgnoreCase))
+            {
+                UiLanguageBox.SelectedItem = item;
+                return;
+            }
+        }
+
+        UiLanguageBox.SelectedIndex = 0;
+    }
+
+    private void SaveUiSettings()
+    {
+        _settingsStore.SaveUiSettings(new UiSettings
+        {
+            SchemaVersion = 1,
+            Language = GetSelectedLanguage()
+        });
+    }
+
+    private string GetSelectedLanguage()
+    {
+        return UiLanguageBox.SelectedValue?.ToString() ?? "";
+    }
+
     private static int ParsePort(string text, int fallback)
     {
         return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port) &&
@@ -245,28 +285,28 @@ public partial class SettingsWindow : Window
     {
         return
         [
-            Option("foregroundApp.category", "作業カテゴリ", "medium"),
-            Option("foregroundApp.appName", "アプリ名", "medium"),
-            Option("foregroundApp.processName", "プロセス名", "medium"),
-            Option("foregroundApp.titleSummary", "ウィンドウタイトル要約", "medium"),
-            Option("foregroundApp.rawWindowTitle", "ウィンドウタイトル原文", "high"),
-            Option("events.foreground_app_category_changed", "作業カテゴリの遷移イベント", "medium"),
-            Option("activity.contextSwitchesPerMin", "アプリ切替頻度", "medium"),
-            Option("events.context_switch_burst", "アプリ切替増加イベント", "medium"),
-            Option("media.isAvailable", "メディアセッション有無", "medium"),
-            Option("media.playbackStatus", "メディア再生状態", "medium"),
-            Option("media.sourceAppUserModelId", "メディア再生元アプリ", "medium"),
-            Option("media.title", "メディアタイトル", "high"),
-            Option("media.artist", "メディアアーティスト", "high"),
-            Option("media.albumTitle", "メディアアルバム", "high"),
-            Option("events.media_playback_started", "メディア再生開始イベント", "medium"),
-            Option("events.media_playback_paused", "メディア一時停止イベント", "medium"),
-            Option("events.media_session_changed", "メディアセッション変更イベント", "medium"),
-            Option("events.media_session_changed.title", "メディアセッション変更イベント: タイトル", "high"),
-            Option("events.media_session_changed.artist", "メディアセッション変更イベント: アーティスト", "high"),
-            Option("system.timeZoneId", "タイムゾーン", "medium"),
-            Option("display.count", "ディスプレイ数", "medium"),
-            Option("displays", "ディスプレイ構成", "medium")
+            Option("foregroundApp.category", Strings.TxOptForegroundCategory, "medium"),
+            Option("foregroundApp.appName", Strings.TxOptForegroundAppName, "medium"),
+            Option("foregroundApp.processName", Strings.TxOptForegroundProcessName, "medium"),
+            Option("foregroundApp.titleSummary", Strings.TxOptForegroundTitleSummary, "medium"),
+            Option("foregroundApp.rawWindowTitle", Strings.TxOptForegroundRawWindowTitle, "high"),
+            Option("events.foreground_app_category_changed", Strings.TxOptEventForegroundCategoryChanged, "medium"),
+            Option("activity.contextSwitchesPerMin", Strings.TxOptActivityContextSwitches, "medium"),
+            Option("events.context_switch_burst", Strings.TxOptEventContextSwitchBurst, "medium"),
+            Option("media.isAvailable", Strings.TxOptMediaIsAvailable, "medium"),
+            Option("media.playbackStatus", Strings.TxOptMediaPlaybackStatus, "medium"),
+            Option("media.sourceAppUserModelId", Strings.TxOptMediaSourceApp, "medium"),
+            Option("media.title", Strings.TxOptMediaTitle, "high"),
+            Option("media.artist", Strings.TxOptMediaArtist, "high"),
+            Option("media.albumTitle", Strings.TxOptMediaAlbumTitle, "high"),
+            Option("events.media_playback_started", Strings.TxOptEventMediaPlaybackStarted, "medium"),
+            Option("events.media_playback_paused", Strings.TxOptEventMediaPlaybackPaused, "medium"),
+            Option("events.media_session_changed", Strings.TxOptEventMediaSessionChanged, "medium"),
+            Option("events.media_session_changed.title", Strings.TxOptEventMediaSessionChangedTitle, "high"),
+            Option("events.media_session_changed.artist", Strings.TxOptEventMediaSessionChangedArtist, "high"),
+            Option("system.timeZoneId", Strings.TxOptSystemTimeZone, "medium"),
+            Option("display.count", Strings.TxOptDisplayCount, "medium"),
+            Option("displays", Strings.TxOptDisplays, "medium")
         ];
     }
 

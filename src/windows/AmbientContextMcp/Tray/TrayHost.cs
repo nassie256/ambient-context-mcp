@@ -1,5 +1,6 @@
 using System.Windows.Forms;
 using AmbientContextMcp.Mcp;
+using AmbientContextMcp.Resources;
 using Microsoft.Extensions.Hosting;
 using Drawing = System.Drawing;
 using WinFormsApp = System.Windows.Forms.Application;
@@ -39,16 +40,16 @@ public sealed class TrayHost : IDisposable
         };
         _menu.Items.Add(_statusItem);
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add("設定...", image: null, OnSettingsClick);
+        _menu.Items.Add(Strings.TraySettings, image: null, OnSettingsClick);
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add("MCP URL をコピー", image: null, OnCopyUrlClick);
-        _menu.Items.Add("MCP トークンをコピー", image: null, OnCopyTokenClick);
-        _menu.Items.Add("Claude Code 用設定をコピー", image: null, OnCopyClaudeCodeSnippetClick);
+        _menu.Items.Add(Strings.TrayCopyMcpUrl, image: null, OnCopyUrlClick);
+        _menu.Items.Add(Strings.TrayCopyMcpToken, image: null, OnCopyTokenClick);
+        _menu.Items.Add(Strings.TrayCopyClaudeCodeSnippet, image: null, OnCopyClaudeCodeSnippetClick);
         _menu.Items.Add(new ToolStripSeparator());
-        _pauseResumeItem = new ToolStripMenuItem("一時停止", image: null, OnPauseResumeClick);
+        _pauseResumeItem = new ToolStripMenuItem(Strings.TrayPause, image: null, OnPauseResumeClick);
         _menu.Items.Add(_pauseResumeItem);
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add("終了", image: null, OnExitClick);
+        _menu.Items.Add(Strings.TrayExit, image: null, OnExitClick);
 
         _notifyIcon = new NotifyIcon
         {
@@ -90,7 +91,7 @@ public sealed class TrayHost : IDisposable
 
     private string GetStatusText()
     {
-        var paused = _paused ? " (一時停止中)" : "";
+        var paused = _paused ? Strings.TrayPausedSuffix : "";
         return $"Ambient Context MCP — :{_mcpHost.Settings.Port}{paused}";
     }
 
@@ -129,7 +130,7 @@ public sealed class TrayHost : IDisposable
     private void OnPauseResumeClick(object? sender, EventArgs e)
     {
         _paused = !_paused;
-        _pauseResumeItem.Text = _paused ? "再開" : "一時停止";
+        _pauseResumeItem.Text = _paused ? Strings.TrayResume : Strings.TrayPause;
         RefreshStatus();
     }
 

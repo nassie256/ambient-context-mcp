@@ -11,6 +11,7 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 - **Small footprint**: A single tray-resident process
 - **MCP Streamable HTTP**: Served at `http://127.0.0.1:37680/mcp`, Bearer token required
 - **Privacy diagnostics**: `ambient.context.get_policy` lets clients self-diagnose "why this value is not being sent"
+- **Bilingual UI**: Japanese / English, follows OS culture by default; switchable from the settings dialog
 
 ## Three exposed tools
 
@@ -26,8 +27,8 @@ Extract the archive and run `ambient-mcp.exe`.
 
 1. Launch the app → the tray shows `[●] Ambient Context MCP — :37680`
 2. Click the tray icon → the settings dialog opens
-3. On the "送信設定" (Transmission) tab, check the contexts you want to expose → Save
-4. Tray menu → "Claude Code 用設定をコピー" (Copy Claude Code config)
+3. On the **Transmission** tab, check the contexts you want to expose → Save
+4. Tray menu → **Copy Claude Code config**
 5. Paste into any terminal
 
 ```cmd
@@ -37,6 +38,8 @@ claude mcp add ambient-context \
 ```
 
 6. From Claude Code you can now call `ambient.context.get_states` and so on.
+
+> **UI language**: defaults to your OS culture. To switch, open **MCP Server → Display language**, choose Japanese / English, save, and restart the app. The privacy classification rationales returned by `ambient.context.get_policy` follow the same setting.
 
 ## Documentation
 
