@@ -177,6 +177,14 @@ public sealed partial class WindowsAmbientContextService
         };
     }
 
+    /// <summary>
+    /// 設定ダイアログなど UI 側で classification 一覧を参照するための公開ラッパ。
+    /// </summary>
+    public static IReadOnlyList<PrivacyClassification> GetPrivacyClassificationsForUi()
+    {
+        return GetPrivacyClassifications();
+    }
+
     private static IReadOnlyList<PrivacyClassification> GetPrivacyClassifications()
     {
         return
@@ -235,6 +243,11 @@ public sealed partial class WindowsAmbientContextService
             Privacy("events.media_playback_paused", "medium", false, "再生一時停止。割り込み制御に有用だがOpt-in向き。"),
             Privacy("events.media_playback_stopped", "medium", false, "再生停止。割り込み制御に有用だがOpt-in向き。"),
             Privacy("events.media_playback_status_changed", "medium", false, "再生状態の変化。割り込み制御に有用だがOpt-in向き。"),
+            // events.media_session_changed の payload キーは個別に分類する。
+            // event 本体は「曲が変わった瞬間」のタイミング信号 (medium) で、
+            // 曲名/アーティストは別 path で個別 opt-in を要求する (high)。
+            Privacy("events.media_session_changed.title", "high", false, "曲名・動画名・配信タイトル。視聴履歴そのものなので個別 opt-in 推奨。"),
+            Privacy("events.media_session_changed.artist", "high", false, "アーティスト/出演者。視聴履歴そのものなので個別 opt-in 推奨。"),
 
             Privacy("system.timeZoneId", "medium", false, "地域推定につながる。時刻挨拶にはローカル処理で足りる。"),
             Privacy("system.uptimeSeconds", "low", true, "再起動直後か長時間稼働中かの判断に使える低機微の粗い稼働時間。"),
@@ -251,7 +264,7 @@ public sealed partial class WindowsAmbientContextService
             Privacy("events.display_count_changed", "medium", false, "外部モニター接続/解除。作業環境情報なのでOpt-in向き。"),
 
             Privacy("events.foreground_changed", "medium", false, "アプリ切替頻度から作業リズムを推測できる。"),
-            Privacy("events.media_session_changed", "high", false, "メディアタイトルを含むため高機微。")
+            Privacy("events.media_session_changed", "medium", false, "曲が変わった瞬間のタイミング信号。曲名/アーティストは別 path (.title/.artist) で個別 opt-in が必要。")
         ];
     }
 

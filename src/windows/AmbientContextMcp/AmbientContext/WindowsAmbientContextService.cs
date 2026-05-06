@@ -110,7 +110,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         _messageWindow = messageWindow ?? throw new ArgumentNullException(nameof(messageWindow));
         _snapshotPath = snapshotPath ?? GetDefaultSnapshotPath();
         _foregroundProc = OnForegroundEvent;
-        _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore);
+        _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore, GetPrivacyClassificationsForUi());
         _messageWindow.MessageReceived += OnMessageReceived;
     }
 
@@ -164,7 +164,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
 
     public void ReloadTransmissionPolicy()
     {
-        _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore);
+        _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore, GetPrivacyClassificationsForUi());
         if (_started)
         {
             CaptureAndStore("transmission_policy_reloaded");

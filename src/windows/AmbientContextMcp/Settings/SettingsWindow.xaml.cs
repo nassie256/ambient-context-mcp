@@ -9,6 +9,7 @@ using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using Clipboard = System.Windows.Clipboard;
 using AmbientContextMcp.Autostart;
 using AmbientContextMcp.Core.Hub;
+using AmbientContextMcp.Core.Policy;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Mcp;
 
@@ -180,11 +181,14 @@ public partial class SettingsWindow : Window
             }
         }
 
-        _settingsStore.SaveAmbientTransmissionSettings(new AmbientTransmissionSettings
-        {
-            SchemaVersion = 1,
-            PathTransmitOverrides = overrides
-        });
+        AmbientTransmissionPolicy.Save(
+            _settingsStore,
+            new AmbientTransmissionSettings
+            {
+                SchemaVersion = 1,
+                PathTransmitOverrides = overrides
+            },
+            WindowsAmbientContextService.GetPrivacyClassificationsForUi());
     }
 
     private void LoadLocalContextSettings()
@@ -257,7 +261,9 @@ public partial class SettingsWindow : Window
             Option("media.albumTitle", "メディアアルバム", "high"),
             Option("events.media_playback_started", "メディア再生開始イベント", "medium"),
             Option("events.media_playback_paused", "メディア一時停止イベント", "medium"),
-            Option("events.media_session_changed", "メディアセッション変更イベント", "high"),
+            Option("events.media_session_changed", "メディアセッション変更イベント", "medium"),
+            Option("events.media_session_changed.title", "メディアセッション変更イベント: タイトル", "high"),
+            Option("events.media_session_changed.artist", "メディアセッション変更イベント: アーティスト", "high"),
             Option("system.timeZoneId", "タイムゾーン", "medium"),
             Option("display.count", "ディスプレイ数", "medium"),
             Option("displays", "ディスプレイ構成", "medium")
