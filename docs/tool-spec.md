@@ -1,6 +1,6 @@
 # MCP ツール契約
 
-Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを公開します。エンドポイントは既定で `http://127.0.0.1:37680/mcp`、Bearer トークン必須、Origin ヘッダーがある場合は `localhost` / `127.0.0.1` / `::1` のみ許可。
+Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを公開します。エンドポイントは既定で `http://127.0.0.1:37690/mcp`、Bearer トークン必須、Origin ヘッダーがある場合は `localhost` / `127.0.0.1` / `::1` のみ許可。
 
 ## ツール一覧
 

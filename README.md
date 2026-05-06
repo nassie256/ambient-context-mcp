@@ -9,7 +9,7 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 - **ローカル完結**: 127.0.0.1 のみで待ち受け、外部送信は一切なし
 - **既定 OFF**: 機微度 medium / high の情報は明示的に opt-in しない限り送信されない
 - **小さいフットプリント**: タスクトレイ常駐の単一プロセス
-- **MCP Streamable HTTP**: `http://127.0.0.1:37680/mcp` で公開、Bearer トークン必須
+- **MCP Streamable HTTP**: `http://127.0.0.1:37690/mcp` で公開、Bearer トークン必須
 - **プライバシー診断ツール**: `ambient.context.get_policy` で「なぜこの値が出力されないか」をクライアントから自己診断可能
 
 ## 公開する 3 ツール
@@ -24,7 +24,7 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 
 アーカイブの内容を展開し、ambient-mcp.exe を実行してください。
 
-1. アプリ起動 → タスクトレイに `[●] Ambient Context MCP — :37680` が表示
+1. アプリ起動 → タスクトレイに `[●] Ambient Context MCP — :37690` が表示
 2. トレイクリック → 設定ダイアログが開く
 3. 「送信設定」タブで公開して構わない context にチェック → 保存
 4. トレイメニュー → 「Claude Code 用設定をコピー」
@@ -32,7 +32,7 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 
 ```cmd
 claude mcp add ambient-context \
-  --transport http http://127.0.0.1:37680/mcp \
+  --transport http http://127.0.0.1:37690/mcp \
   --header "Authorization: Bearer <TOKEN>"
 ```
 

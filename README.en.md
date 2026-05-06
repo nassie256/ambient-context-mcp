@@ -9,7 +9,7 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 - **Local-only**: Listens on 127.0.0.1 only — no outbound network traffic
 - **Off by default**: Medium / high sensitivity fields are not transmitted unless explicitly opted in
 - **Small footprint**: A single tray-resident process
-- **MCP Streamable HTTP**: Served at `http://127.0.0.1:37680/mcp`, Bearer token required
+- **MCP Streamable HTTP**: Served at `http://127.0.0.1:37690/mcp`, Bearer token required
 - **Privacy diagnostics**: `ambient.context.get_policy` lets clients self-diagnose "why this value is not being sent"
 - **Bilingual UI**: Japanese / English, follows OS culture by default; switchable from the settings dialog
 
@@ -25,7 +25,7 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 
 Extract the archive and run `ambient-mcp.exe`.
 
-1. Launch the app → the tray shows `[●] Ambient Context MCP — :37680`
+1. Launch the app → the tray shows `[●] Ambient Context MCP — :37690`
 2. Click the tray icon → the settings dialog opens
 3. On the **Transmission** tab, check the contexts you want to expose → Save
 4. Tray menu → **Copy Claude Code config**
@@ -33,7 +33,7 @@ Extract the archive and run `ambient-mcp.exe`.
 
 ```cmd
 claude mcp add ambient-context \
-  --transport http http://127.0.0.1:37680/mcp \
+  --transport http http://127.0.0.1:37690/mcp \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
