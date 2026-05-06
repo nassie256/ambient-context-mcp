@@ -1,5 +1,7 @@
 # Ambient Context MCP
 
+[en](README.en.md) | **ja**
+
 Windows のローカル ambient context (在席状態、フォアグラウンドアプリ種別、バッテリ、電源イベント、システム負荷、長時間作業の検知など) を、プライバシー分類された MCP ツールとして任意の AI クライアント (Claude Code、Claude Desktop 等) に公開するトレイ常駐プロセスです。
 
 ## 特徴
