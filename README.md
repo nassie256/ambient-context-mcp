@@ -1,5 +1,11 @@
 # Ambient Context MCP
 
+[![MCP](https://img.shields.io/badge/MCP-server-1f6feb?logo=anthropic&logoColor=white)](https://modelcontextprotocol.io)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078d6?logo=windows&logoColor=white)](#必要環境)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512bd4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+[![Release](https://img.shields.io/github/v/release/nassie256/ambient-context-mcp?logo=github&logoColor=white)](https://github.com/nassie256/ambient-context-mcp/releases)
+[![License: MIT](https://img.shields.io/github/license/nassie256/ambient-context-mcp)](LICENSE)
+
 [en](README.en.md) | **ja**
 
 Windows のローカル ambient context (在席状態、フォアグラウンドアプリ種別、バッテリ、電源イベント、システム負荷、長時間作業の検知など) を、プライバシー分類された MCP ツールとして任意の AI クライアント (Claude Code、Claude Desktop 等) に公開するトレイ常駐プロセスです。
