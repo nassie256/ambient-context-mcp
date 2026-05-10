@@ -10,6 +10,11 @@
 
 A tray-resident process that exposes local Windows ambient context (presence, foreground app category, battery, power events, system load, long-session detection, etc.) to AI clients (Claude Code, Claude Desktop, etc.) as privacy-classified MCP tools.
 
+<p align="center">
+  <img src="screenshot1.png" alt="Settings dialog – MCP Server tab" width="45%" />
+  <img src="screenshot2.png" alt="Settings dialog – Transmission tab" width="45%" />
+</p>
+
 ## Features
 
 - **Local-only**: Listens on 127.0.0.1 only — no outbound network traffic
@@ -77,6 +82,7 @@ dotnet publish src\windows\AmbientContextMcp\AmbientContextMcp.csproj `
 %LOCALAPPDATA%\AmbientContextMcp\
 ├── settings.json          # User settings (transmission opt-in, port, token)
 ├── ambient-context.json   # Local cache of the latest snapshot (for debugging)
+├── events.jsonl           # Event history (only when persistence is enabled)
 └── mcp-api.json           # Discovery info for the running MCP (removed on exit)
 ```
 

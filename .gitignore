@@ -27,3 +27,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Claude Code local-only instructions (per-developer, not shared)
+CLAUDE.local.md
