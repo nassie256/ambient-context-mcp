@@ -1115,7 +1115,16 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             TrimForegroundSwitchTimes(now);
         }
 
-        AddEvent("foreground_changed");
+        // payload key は media_session_changed と同様に親 event の許可を継承する。
+        // category/app_name/process_name は medium (foregroundApp.* と同分類) なので、
+        // events.foreground_changed を ON にしたユーザーには、そのまま流れる。
+        var foreground = GetForegroundApp();
+        AddEvent("foreground_changed", new Dictionary<string, string>
+        {
+            ["category"] = foreground.Category,
+            ["app_name"] = foreground.AppName,
+            ["process_name"] = foreground.ProcessName
+        }, "medium");
         CaptureAndStore("foreground_changed");
     }
 
