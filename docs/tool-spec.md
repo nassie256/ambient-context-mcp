@@ -83,7 +83,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 
 ### `ambient.context.poll_events`
 
-クライアント別カーソル以降の未読イベントを返します。重複抑制と送信フィルタは `get_states` と同じく「ユーザー送信ポリシーで許可された項目」と「指定 scope 範囲に収まる機微度の項目」の AND。scope を高くしてもユーザーが許可していないイベントは出力されません。
+イベントを返します。2 つの呼び出しモードがあり、**`since` / `until` のいずれかを指定すると stateless な history query 扱い**となります。重複抑制と送信フィルタは `get_states` と同じく「ユーザー送信ポリシーで許可された項目」と「指定 scope 範囲に収まる機微度の項目」の AND。scope を高くしてもユーザーが許可していないイベントは出力されません。
 
 **Input**:
 
@@ -93,14 +93,17 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
   "cursor": "client-opaque-cursor",
   "names": ["user_returned", "ac_power_connected"],
   "scopes": ["context.low:read"],
-  "limit": 50
+  "limit": 50,
+  "since": "2026-05-10T00:00:00+09:00",
+  "until": "2026-05-10T23:59:59+09:00"
 }
 ```
 
 - `clientId` 任意。省略時は `ambient-context-mcp`
-- `cursor` 任意。省略時はクライアントの現在位置から
+- `cursor` 任意。省略時はクライアントの現在位置から (history query 時は保持範囲の先頭から)
 - `names` 任意。省略時は許可済み全イベント
-- `limit` 既定 50、最大 100
+- `limit` 既定 50、最大 1000
+- `since` / `until` 任意。ISO 8601 (例: `2026-05-10T00:00:00+09:00`)。指定すると ObservedAt が範囲内のイベントだけを返す
 
 **Output**:
 
@@ -130,6 +133,27 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 - Hub は `clientId` ごとに最後に返したイベント位置を保持
 - cursor が期限切れの場合は保持範囲内の最古位置から再開し `cursorExpired: true` を返す
 - 既読化は `poll_events` の成功応答時。通信エラー時は同じ cursor で再取得可
+
+## 呼び出しモード: subscription / history query
+
+`poll_events` は 2 通りの呼び方ができます。
+
+### subscription モード (既定)
+
+`since` / `until` を**両方とも指定しない**呼び出し。クライアント別の cursor が前進する従来挙動です。
+
+- 初回呼び出し (cursor 未指定 + クライアント位置未保存) は最新位置にカーソルがセットされ 0 件返ります — 「これから発生するイベントを順に subscribe する」用途
+- 同じ cursor で再呼び出しすると同じ結果 (通信エラー時の再取得用)
+- 成功応答時に `_clientPositions[clientId]` が進む
+
+### history query モード
+
+`since` または `until` のいずれかを指定した呼び出し。**stateless** で、何度呼んでも結果が消えません。
+
+- `_clientPositions` は更新されない (副作用なし)
+- cursor 未指定なら**保持範囲の先頭**から開始 (subscription モードと逆)
+- pagination は `nextCursor` を次の呼び出しに渡せば OK (時刻範囲フィルタは併用される)
+- 「今日 0:00 以降のイベントをまとめて欲しい」という要求は `since` だけ渡せば一発で取得可能 (上限 1000 件 / 1 回。`hasMore: true` の間は cursor を渡して継続)
 
 ## Scope
 

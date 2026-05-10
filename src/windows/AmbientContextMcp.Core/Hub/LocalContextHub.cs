@@ -1,4 +1,6 @@
+using System.IO;
 using System.Text;
+using System.Text.Json;
 using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Settings;
 
@@ -13,13 +15,23 @@ public sealed class LocalContextHub
     private const int MinMaxEventCount = 100;
     private const int MaxMaxEventCount = 5000;
     private const int DefaultPollLimit = 50;
-    private const int MaxPollLimit = 100;
+    private const int MaxPollLimit = 1000;
+
+    // JSONL は 1 行 1 イベントで grep / tail しやすくするため WriteIndented = false で書き出す。
+    // AmbientContextJson.Options は WriteIndented = true なので転用しない。
+    private static readonly JsonSerializerOptions JsonlOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
 
     private readonly object _lock = new();
     private readonly List<LocalContextEvent> _events = [];
     private readonly HashSet<string> _eventFingerprints = new(StringComparer.Ordinal);
     private readonly Dictionary<string, long> _clientPositions = new(StringComparer.OrdinalIgnoreCase);
     private readonly ISettingsStore _settingsStore;
+    private readonly string _eventLogPath;
 
     private IReadOnlyList<AmbientState> _latestStates = [];
     private IReadOnlyList<PrivacyClassification> _privacyClassifications = [];
@@ -31,6 +43,7 @@ public sealed class LocalContextHub
     private int _outboundEventCandidateCount;
     private int _maxEventAgeHours = DefaultMaxEventAgeHours;
     private int _maxEventCount = DefaultMaxEventCount;
+    private bool _persistEventLog;
     private long _nextSequence;
 
     public event EventHandler<LocalContextEvent>? EventPublished;
@@ -38,12 +51,18 @@ public sealed class LocalContextHub
     public LocalContextHub(ISettingsStore settingsStore)
     {
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
-        ReloadSettings();
+        _eventLogPath = ResolveEventLogPath(_settingsStore.SettingsPath);
+        ApplySettings(initialLoad: true);
+        if (_persistEventLog)
+        {
+            LoadPersistedEventLog();
+        }
     }
 
     public void Ingest(AmbientContextSnapshot snapshot)
     {
         List<LocalContextEvent> publishedEvents = [];
+        var trimmedAny = false;
         lock (_lock)
         {
             _latestObservedAt = snapshot.ObservedAt;
@@ -78,7 +97,21 @@ public sealed class LocalContextHub
                 publishedEvents.Add(localEvent);
             }
 
-            TrimEvents(DateTimeOffset.Now);
+            trimmedAny = TrimEvents(DateTimeOffset.Now);
+
+            if (_persistEventLog)
+            {
+                if (trimmedAny)
+                {
+                    // 古いイベントが落ちたので JSONL を _events から書き直す (compaction)。
+                    // 同一トランザクションの新規イベントもこの 1 回の書き出しに含まれる。
+                    RewriteEventLogUnlocked();
+                }
+                else if (publishedEvents.Count > 0)
+                {
+                    AppendEventsUnlocked(publishedEvents);
+                }
+            }
         }
 
         foreach (var localEvent in publishedEvents)
@@ -111,10 +144,14 @@ public sealed class LocalContextHub
             TrimEvents(DateTimeOffset.Now);
 
             var clientId = NormalizeClientId(request.ClientId);
-            var cursorResult = ResolveCursor(clientId, request.Cursor);
             var limit = NormalizeLimit(request.Limit);
+            var isHistoryQuery = request.Since.HasValue || request.Until.HasValue;
+            var cursorResult = ResolveCursor(clientId, request.Cursor, isHistoryQuery);
+
             var matchingEvents = _events
                 .Where(item => item.Sequence > cursorResult.Sequence)
+                .Where(item => !request.Since.HasValue || item.ObservedAt >= request.Since.Value)
+                .Where(item => !request.Until.HasValue || item.ObservedAt <= request.Until.Value)
                 .Where(item => IsNameIncluded(item.Name, request.Names))
                 .Where(item => IsSensitivityAllowed(item.Sensitivity, request.Scopes))
                 .Take(limit + 1)
@@ -124,7 +161,14 @@ public sealed class LocalContextHub
             var lastSequence = returnedEvents.Count > 0
                 ? returnedEvents[^1].Sequence
                 : cursorResult.Sequence;
-            _clientPositions[clientId] = lastSequence;
+
+            // history query (since/until 指定) は副作用なしの stateless 取得。
+            // クライアント位置を進めない (= 同じ範囲で再取得しても結果が消えない)。
+            // pagination は呼び出し側が NextCursor を渡すことで行う。
+            if (!isHistoryQuery)
+            {
+                _clientPositions[clientId] = lastSequence;
+            }
 
             return new LocalContextPollResponse
             {
@@ -169,20 +213,63 @@ public sealed class LocalContextHub
 
     public void ReloadSettings()
     {
+        ApplySettings(initialLoad: false);
+    }
+
+    /// <summary>
+    /// 設定の読み込みと、永続化フラグ遷移に応じたファイル操作を一箇所にまとめる。
+    /// initialLoad = true (= コンストラクタからの初回呼び出し) の場合、
+    /// 「OFF→ON / ON→OFF 同期」分岐を**意図的にスキップ**する。
+    /// 初回時点で _persistEventLog は default false で初期化されているため、
+    /// ユーザーが永続化を ON にした保存設定をロードすると false→true に見えてしまうが、
+    /// それを「ユーザーが ON に切替えた」と誤認して空の _events をファイルに書き戻すと、
+    /// 既存の events.jsonl を消してしまう (これが過去のバグ要因)。
+    /// 初回の events.jsonl 復元はコンストラクタ側の <see cref="LoadPersistedEventLog"/> に任せる。
+    /// </summary>
+    private void ApplySettings(bool initialLoad)
+    {
         var settings = _settingsStore.LoadLocalContextSettings();
         lock (_lock)
         {
+            var previousPersist = _persistEventLog;
             _maxEventAgeHours = NormalizeMaxEventAgeHours(settings.MaxEventAgeHours);
             _maxEventCount = NormalizeMaxEventCount(settings.MaxEventCount);
-            TrimEvents(DateTimeOffset.Now);
+            _persistEventLog = settings.PersistEventLog;
+            var trimmed = TrimEvents(DateTimeOffset.Now);
+
+            if (initialLoad)
+            {
+                return;
+            }
+
+            if (_persistEventLog)
+            {
+                if (!previousPersist || trimmed)
+                {
+                    // OFF → ON: 在席中の opt-in。in-memory の _events をファイルに同期する。
+                    // trimmed: 古いイベントが落ちたので compaction する。
+                    RewriteEventLogUnlocked();
+                }
+            }
+            else if (previousPersist)
+            {
+                // ON → OFF: ユーザーが明示的に opt-out したのでファイルを削除する。
+                DeleteEventLogUnlocked();
+            }
         }
     }
 
-    private CursorResult ResolveCursor(string clientId, string cursor)
+    private CursorResult ResolveCursor(string clientId, string cursor, bool isHistoryQuery)
     {
         if (TryDecodeCursor(cursor, out var cursorSequence))
         {
             return new CursorResult(ClampExpiredCursor(cursorSequence), IsExpired(cursorSequence));
+        }
+
+        if (isHistoryQuery)
+        {
+            // history query は保持範囲の先頭から開始。クライアント位置は触らない。
+            return new CursorResult(_events.Count == 0 ? 0 : Math.Max(0, _events[0].Sequence - 1), false);
         }
 
         if (_clientPositions.TryGetValue(clientId, out var clientSequence))
@@ -210,19 +297,188 @@ public sealed class LocalContextHub
         return _events.Count > 0 && sequence < _events[0].Sequence - 1;
     }
 
-    private void TrimEvents(DateTimeOffset now)
+    /// <summary>
+    /// 戻り値は「実際にイベントを 1 件以上落としたか」。永続化が ON の場合、
+    /// 呼び出し側はこのフラグを見て events.jsonl を rewrite するか判定する。
+    /// </summary>
+    private bool TrimEvents(DateTimeOffset now)
     {
+        var trimmed = false;
         var cutoff = now - TimeSpan.FromHours(_maxEventAgeHours);
         while (_events.Count > 0 && _events[0].ObservedAt < cutoff)
         {
             _eventFingerprints.Remove(GetFingerprint(_events[0]));
             _events.RemoveAt(0);
+            trimmed = true;
         }
 
         while (_events.Count > _maxEventCount)
         {
             _eventFingerprints.Remove(GetFingerprint(_events[0]));
             _events.RemoveAt(0);
+            trimmed = true;
+        }
+
+        return trimmed;
+    }
+
+    private static string ResolveEventLogPath(string settingsPath)
+    {
+        var directory = Path.GetDirectoryName(settingsPath);
+        return string.IsNullOrWhiteSpace(directory)
+            ? "events.jsonl"
+            : Path.Combine(directory, "events.jsonl");
+    }
+
+    /// <summary>
+    /// 起動時に既存 events.jsonl を読み込んで _events / _eventFingerprints / _nextSequence を再構築する。
+    /// 読み込み後、現在の age/count 制限で trim する。ファイル破損や JSON エラーは黙って無視する
+    /// (Hub には ILogger が無い設計なので、復元失敗で起動が止まらないことを優先)。
+    /// </summary>
+    private void LoadPersistedEventLog()
+    {
+        lock (_lock)
+        {
+            if (!File.Exists(_eventLogPath))
+            {
+                return;
+            }
+
+            try
+            {
+                using var stream = File.OpenRead(_eventLogPath);
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                string? line;
+                while ((line = reader.ReadLine()) is not null)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+
+                    LocalContextEvent? loaded;
+                    try
+                    {
+                        loaded = JsonSerializer.Deserialize<LocalContextEvent>(line, JsonlOptions);
+                    }
+                    catch (JsonException)
+                    {
+                        // 1 行壊れていても続行する。
+                        continue;
+                    }
+
+                    if (loaded is null)
+                    {
+                        continue;
+                    }
+
+                    var fingerprint = GetFingerprint(loaded);
+                    if (!_eventFingerprints.Add(fingerprint))
+                    {
+                        continue;
+                    }
+
+                    _events.Add(loaded);
+                    if (loaded.Sequence > _nextSequence)
+                    {
+                        _nextSequence = loaded.Sequence;
+                    }
+                }
+            }
+            catch (IOException)
+            {
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            _events.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
+
+            if (TrimEvents(DateTimeOffset.Now))
+            {
+                RewriteEventLogUnlocked();
+            }
+        }
+    }
+
+    private void AppendEventsUnlocked(IReadOnlyList<LocalContextEvent> events)
+    {
+        try
+        {
+            EnsureEventLogDirectoryUnlocked();
+            using var stream = new FileStream(
+                _eventLogPath,
+                FileMode.Append,
+                FileAccess.Write,
+                FileShare.Read);
+            using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+            foreach (var item in events)
+            {
+                writer.WriteLine(JsonSerializer.Serialize(item, JsonlOptions));
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private void RewriteEventLogUnlocked()
+    {
+        try
+        {
+            EnsureEventLogDirectoryUnlocked();
+            var tempPath = _eventLogPath + ".tmp";
+            using (var stream = new FileStream(
+                tempPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.Read))
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+            {
+                foreach (var item in _events)
+                {
+                    writer.WriteLine(JsonSerializer.Serialize(item, JsonlOptions));
+                }
+            }
+
+            File.Move(tempPath, _eventLogPath, overwrite: true);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private void DeleteEventLogUnlocked()
+    {
+        try
+        {
+            if (File.Exists(_eventLogPath))
+            {
+                File.Delete(_eventLogPath);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private void EnsureEventLogDirectoryUnlocked()
+    {
+        var directory = Path.GetDirectoryName(_eventLogPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
         }
     }
 
