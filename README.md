@@ -11,8 +11,8 @@
 Windows のローカル ambient context (在席状態、フォアグラウンドアプリ種別、バッテリ、電源イベント、システム負荷、長時間作業の検知など) を、プライバシー分類された MCP ツールとして任意の AI クライアント (Claude Code、Claude Desktop 等) に公開するトレイ常駐プロセスです。
 
 <p align="center">
-  <img src="screenshot1.png" alt="MCP サーバ設定タブ" width="48%" />
-  <img src="screenshot2.png" alt="送信設定タブ" width="48%" />
+  <img src="screenshot1.png" alt="MCP サーバ設定タブ" width="380" />
+  <img src="screenshot2.png" alt="送信設定タブ" width="380" />
 </p>
 
 ## 特徴
