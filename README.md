@@ -79,6 +79,7 @@ dotnet publish src\windows\AmbientContextMcp\AmbientContextMcp.csproj `
 %LOCALAPPDATA%\AmbientContextMcp\
 ├── settings.json          # ユーザー設定 (送信オプトイン、ポート、トークン)
 ├── ambient-context.json   # 直近 snapshot のローカルキャッシュ (デバッグ用)
+├── events.jsonl           # イベント履歴 (永続化を有効にした場合のみ)
 └── mcp-api.json           # 起動中 MCP の discovery 情報 (終了時に削除)
 ```
 
