@@ -68,8 +68,8 @@ Ambient Context MCP は OS から取得したコンテキストを path 単位�
 | `foregroundApp.appName` | medium | 利用アプリ名 |
 | `foregroundApp.processName` | medium | 環境情報 |
 | `foregroundApp.titleSummary.*` | medium | サイト名/拡張子から作業推測 |
-| `events.foreground_app_category_changed` | medium | カテゴリ遷移 |
-| `events.foreground_changed` | medium | 切替頻度 |
+| `events.foreground_app_category_changed` | medium | カテゴリ遷移。payload: `from` / `to` (category)、`app_name` / `process_name` (遷移先) |
+| `events.foreground_changed` | medium | 切替頻度。payload: `category` / `app_name` / `process_name` (遷移先) |
 | `activity.contextSwitchesPerMin` | medium | 作業リズム |
 | `events.context_switch_burst` | medium | 切替増加 |
 | `media.isAvailable` | medium | メディア再生有無 |

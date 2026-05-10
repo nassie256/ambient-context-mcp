@@ -191,6 +191,10 @@ public static class Strings
         "作業カテゴリの遷移イベント",
         "Work category transition event");
 
+    public static string TxOptEventForegroundChanged { get; } = T(
+        "フォアグラウンド切替イベント (アプリ名・プロセス名込み)",
+        "Foreground switch event (includes app and process name)");
+
     public static string TxOptActivityContextSwitches { get; } = T(
         "アプリ切替頻度",
         "App switch rate");
