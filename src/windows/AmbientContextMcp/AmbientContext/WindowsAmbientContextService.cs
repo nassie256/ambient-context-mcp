@@ -574,15 +574,23 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         };
     }
 
+    // SMTC API は WinRT のセッションプロセス (各 media app) を経由するため、
+    // 相手アプリがハング/未応答の場合、await が永久に返らないことがある。
+    // 取得スレッドは MessageOnlyWindow の単一スレッドで、ここが詰まると
+    // foreground hook など全イベント処理が止まる (= 過去に observed)。
+    // 短い timeout でタスクが返らなければ「media 不明」として続行する。
+    private static readonly TimeSpan MediaApiTimeout = TimeSpan.FromMilliseconds(1500);
+
     private static MediaContext GetMedia()
     {
         try
         {
-            var manager = GlobalSystemMediaTransportControlsSessionManager
-                .RequestAsync()
-                .AsTask()
-                .GetAwaiter()
-                .GetResult();
+            var requestTask = GlobalSystemMediaTransportControlsSessionManager.RequestAsync().AsTask();
+            if (!requestTask.Wait(MediaApiTimeout))
+            {
+                return new MediaContext { Error = "GetMedia.RequestAsync timed out" };
+            }
+            var manager = requestTask.Result;
             var allSessions = manager.GetSessions()
                 .Select(ToMediaSessionContext)
                 .ToList();
@@ -605,10 +613,24 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             var playbackInfo = session.GetPlaybackInfo();
             var playbackStatus = playbackInfo.PlaybackStatus.ToString();
             var timeline = session.GetTimelineProperties();
-            var mediaProperties = session.TryGetMediaPropertiesAsync()
-                .AsTask()
-                .GetAwaiter()
-                .GetResult();
+            var propsTask = session.TryGetMediaPropertiesAsync().AsTask();
+            if (!propsTask.Wait(MediaApiTimeout))
+            {
+                return new MediaContext
+                {
+                    IsAvailable = true,
+                    SourceAppUserModelId = session.SourceAppUserModelId,
+                    PlaybackStatus = playbackStatus,
+                    IsPlaying = playbackStatus.Equals("Playing", StringComparison.OrdinalIgnoreCase),
+                    PositionMilliseconds = (long)timeline.Position.TotalMilliseconds,
+                    StartTimeMilliseconds = (long)timeline.StartTime.TotalMilliseconds,
+                    EndTimeMilliseconds = (long)timeline.EndTime.TotalMilliseconds,
+                    TimelineLastUpdatedAt = timeline.LastUpdatedTime,
+                    Sessions = sessions,
+                    Error = "GetMedia.TryGetMediaPropertiesAsync timed out"
+                };
+            }
+            var mediaProperties = propsTask.Result;
 
             return new MediaContext
             {
@@ -653,10 +675,20 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             var playbackInfo = session.GetPlaybackInfo();
             var playbackStatus = playbackInfo.PlaybackStatus.ToString();
             var timeline = session.GetTimelineProperties();
-            var mediaProperties = session.TryGetMediaPropertiesAsync()
-                .AsTask()
-                .GetAwaiter()
-                .GetResult();
+            var propsTask = session.TryGetMediaPropertiesAsync().AsTask();
+            if (!propsTask.Wait(MediaApiTimeout))
+            {
+                return new MediaSessionContext
+                {
+                    SourceAppUserModelId = session.SourceAppUserModelId,
+                    PlaybackStatus = playbackStatus,
+                    IsPlaying = playbackStatus.Equals("Playing", StringComparison.OrdinalIgnoreCase),
+                    PositionMilliseconds = (long)timeline.Position.TotalMilliseconds,
+                    EndTimeMilliseconds = (long)timeline.EndTime.TotalMilliseconds,
+                    Error = "ToMediaSessionContext.TryGetMediaPropertiesAsync timed out"
+                };
+            }
+            var mediaProperties = propsTask.Result;
 
             return new MediaSessionContext
             {
