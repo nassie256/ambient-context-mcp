@@ -41,6 +41,8 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
               <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static res:Strings.LabelStatus}" Margin="0,0,12,8" />
@@ -70,7 +72,22 @@
                         Content="{x:Static res:Strings.AutoStartCheckbox}"
                         Margin="0,4,0,8" />
 
-              <Button Grid.Row="5"
+              <CheckBox Grid.Row="5"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="3"
+                        x:Name="PersistEventLogCheckBox"
+                        Content="{x:Static res:Strings.PersistEventLogCheckbox}"
+                        Margin="0,4,0,2" />
+
+              <TextBlock Grid.Row="6"
+                         Grid.Column="0"
+                         Grid.ColumnSpan="3"
+                         Text="{x:Static res:Strings.PersistEventLogNote}"
+                         FontSize="11"
+                         Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                         Margin="20,0,0,8" />
+
+              <Button Grid.Row="7"
                       Grid.Column="0"
                       Grid.ColumnSpan="3"
                       Content="{x:Static res:Strings.CopyClaudeCodeSnippet}"

@@ -206,6 +206,7 @@ public partial class SettingsWindow : Window
         var settings = _settingsStore.LoadLocalContextSettings();
         SelectComboBoxValue(EventRetentionHoursBox, settings.MaxEventAgeHours);
         SelectComboBoxValue(EventRetentionCountBox, settings.MaxEventCount);
+        PersistEventLogCheckBox.IsChecked = settings.PersistEventLog;
     }
 
     private void SaveLocalContextSettings()
@@ -214,7 +215,8 @@ public partial class SettingsWindow : Window
         {
             SchemaVersion = 1,
             MaxEventAgeHours = GetComboBoxIntValue(EventRetentionHoursBox, 24),
-            MaxEventCount = GetComboBoxIntValue(EventRetentionCountBox, 500)
+            MaxEventCount = GetComboBoxIntValue(EventRetentionCountBox, 500),
+            PersistEventLog = PersistEventLogCheckBox.IsChecked == true
         });
     }
 
