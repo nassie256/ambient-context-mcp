@@ -148,9 +148,12 @@ public sealed class MessageOnlyWindow : IDisposable
                 {
                     action();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Swallow to keep the message pump alive.
+                    // Swallow to keep the message pump alive — but surface to stderr so
+                    // we can diagnose silent-action failures via process redirection.
+                    try { Console.Error.WriteLine($"[MessageOnlyWindow] action threw: {ex}"); }
+                    catch { }
                 }
             }
 
