@@ -8,7 +8,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>ambient-mcp</AssemblyName>
     <RootNamespace>AmbientContextMcp</RootNamespace>
+    <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\AppIcon.ico" />
+  </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
