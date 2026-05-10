@@ -206,6 +206,7 @@ public partial class SettingsWindow : Window
         var settings = _settingsStore.LoadLocalContextSettings();
         SelectComboBoxValue(EventRetentionHoursBox, settings.MaxEventAgeHours);
         SelectComboBoxValue(EventRetentionCountBox, settings.MaxEventCount);
+        PersistEventLogCheckBox.IsChecked = settings.PersistEventLog;
     }
 
     private void SaveLocalContextSettings()
@@ -214,7 +215,8 @@ public partial class SettingsWindow : Window
         {
             SchemaVersion = 1,
             MaxEventAgeHours = GetComboBoxIntValue(EventRetentionHoursBox, 24),
-            MaxEventCount = GetComboBoxIntValue(EventRetentionCountBox, 500)
+            MaxEventCount = GetComboBoxIntValue(EventRetentionCountBox, 500),
+            PersistEventLog = PersistEventLogCheckBox.IsChecked == true
         });
     }
 
@@ -291,6 +293,7 @@ public partial class SettingsWindow : Window
             Option("foregroundApp.titleSummary", Strings.TxOptForegroundTitleSummary, "medium"),
             Option("foregroundApp.rawWindowTitle", Strings.TxOptForegroundRawWindowTitle, "high"),
             Option("events.foreground_app_category_changed", Strings.TxOptEventForegroundCategoryChanged, "medium"),
+            Option("events.foreground_changed", Strings.TxOptEventForegroundChanged, "medium"),
             Option("activity.contextSwitchesPerMin", Strings.TxOptActivityContextSwitches, "medium"),
             Option("events.context_switch_burst", Strings.TxOptEventContextSwitchBurst, "medium"),
             Option("media.isAvailable", Strings.TxOptMediaIsAvailable, "medium"),

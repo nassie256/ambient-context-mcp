@@ -31,6 +31,18 @@ public sealed class LocalContextPollRequest
     public IReadOnlyList<string> Scopes { get; init; } = [];
 
     public int Limit { get; init; } = 50;
+
+    /// <summary>
+    /// 指定すると ObservedAt &gt;= Since のイベントのみを返す。
+    /// Since または Until のいずれかが指定された呼び出しは history query 扱いとなり、
+    /// クライアント位置 (cursor の暗黙進行) は更新されない。
+    /// </summary>
+    public DateTimeOffset? Since { get; init; }
+
+    /// <summary>
+    /// 指定すると ObservedAt &lt;= Until のイベントのみを返す。
+    /// </summary>
+    public DateTimeOffset? Until { get; init; }
 }
 
 public sealed class LocalContextPollResponse

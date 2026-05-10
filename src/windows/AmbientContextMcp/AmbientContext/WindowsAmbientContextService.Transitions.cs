@@ -47,7 +47,13 @@ public sealed partial class WindowsAmbientContextService
             return;
         }
 
-        AddEvent("foreground_app_category_changed", TransitionData(_lastForegroundCategory, foreground.Category), "medium");
+        // foreground_changed は HigherLevelEventsBySuppressedEvent (Projection.cs:13-16) によって
+        // この event 発火時に outbound から落とされるため、後から「何のアプリだったか」を辿れるよう
+        // app_name / process_name もここに載せる (media_session_changed と同設計)。
+        var data = TransitionData(_lastForegroundCategory, foreground.Category);
+        data["app_name"] = foreground.AppName;
+        data["process_name"] = foreground.ProcessName;
+        AddEvent("foreground_app_category_changed", data, "medium");
         _lastForegroundCategory = foreground.Category;
     }
 

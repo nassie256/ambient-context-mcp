@@ -63,6 +63,14 @@ public static class Strings
         "Windows ログイン時に自動起動",
         "Start automatically on Windows login");
 
+    public static string PersistEventLogCheckbox { get; } = T(
+        "イベント履歴をディスクに保存する",
+        "Persist event history to disk");
+
+    public static string PersistEventLogNote { get; } = T(
+        "再起動後も保持期間内の履歴を保てます。",
+        "Keeps history across restarts within the retention window.");
+
     public static string CopyClaudeCodeSnippet { get; } = T(
         "Claude Code 用設定スニペットをコピー",
         "Copy Claude Code config snippet");
@@ -190,6 +198,10 @@ public static class Strings
     public static string TxOptEventForegroundCategoryChanged { get; } = T(
         "作業カテゴリの遷移イベント",
         "Work category transition event");
+
+    public static string TxOptEventForegroundChanged { get; } = T(
+        "フォアグラウンド切替イベント (アプリ名・プロセス名込み)",
+        "Foreground switch event (includes app and process name)");
 
     public static string TxOptActivityContextSwitches { get; } = T(
         "アプリ切替頻度",

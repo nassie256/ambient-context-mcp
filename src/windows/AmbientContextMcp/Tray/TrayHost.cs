@@ -4,6 +4,7 @@ using AmbientContextMcp.Resources;
 using Microsoft.Extensions.Hosting;
 using Drawing = System.Drawing;
 using WinFormsApp = System.Windows.Forms.Application;
+using WpfApp = System.Windows.Application;
 
 namespace AmbientContextMcp.Tray;
 
@@ -15,6 +16,7 @@ namespace AmbientContextMcp.Tray;
 public sealed class TrayHost : IDisposable
 {
     private readonly NotifyIcon _notifyIcon;
+    private readonly Drawing.Icon _icon;
     private readonly ContextMenuStrip _menu;
     private readonly McpServerHost _mcpHost;
     private readonly IHostApplicationLifetime _lifetime;
@@ -51,9 +53,10 @@ public sealed class TrayHost : IDisposable
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(Strings.TrayExit, image: null, OnExitClick);
 
+        _icon = LoadAppIcon();
         _notifyIcon = new NotifyIcon
         {
-            Icon = Drawing.SystemIcons.Information,
+            Icon = _icon,
             Text = "Ambient Context MCP",
             ContextMenuStrip = _menu,
             Visible = true
@@ -86,7 +89,15 @@ public sealed class TrayHost : IDisposable
         _disposed = true;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        _icon.Dispose();
         _menu.Dispose();
+    }
+
+    private static Drawing.Icon LoadAppIcon()
+    {
+        var uri = new Uri("pack://application:,,,/Resources/AppIcon.ico", UriKind.Absolute);
+        using var stream = WpfApp.GetResourceStream(uri).Stream;
+        return new Drawing.Icon(stream, SystemInformation.SmallIconSize);
     }
 
     private string GetStatusText()
