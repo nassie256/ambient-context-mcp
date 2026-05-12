@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp.Core", "A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp", "AmbientContextMcp\AmbientContextMcp.csproj", "{1457A854-4310-4BE4-A1C1-BB554CEF98FC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp.StdioBridge", "AmbientContextMcp.StdioBridge\AmbientContextMcp.StdioBridge.csproj", "{7AE8B26D-9763-40A5-B442-60761AE60565}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1457A854-4310-4BE4-A1C1-BB554CEF98FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AE8B26D-9763-40A5-B442-60761AE60565}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AE8B26D-9763-40A5-B442-60761AE60565}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AE8B26D-9763-40A5-B442-60761AE60565}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AE8B26D-9763-40A5-B442-60761AE60565}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
