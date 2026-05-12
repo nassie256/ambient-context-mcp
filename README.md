@@ -21,15 +21,15 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 - **既定 OFF**: 機微度 medium / high の情報は明示的に opt-in しない限り送信されない
 - **小さいフットプリント**: タスクトレイ常駐の単一プロセス
 - **MCP Streamable HTTP**: `http://127.0.0.1:37690/mcp` で公開、Bearer トークン必須
-- **プライバシー診断ツール**: `ambient.context.get_policy` で「なぜこの値が出力されないか」をクライアントから自己診断可能
+- **プライバシー診断ツール**: `ambient_context_get_policy` で「なぜこの値が出力されないか」をクライアントから自己診断可能
 
 ## 公開する 3 ツール
 
 | ツール | 説明 |
 |---|---|
-| `ambient.context.get_states` | 現在のコンテキスト状態 (presence, battery, foreground app category 等) |
-| `ambient.context.poll_events` | クライアント別カーソル以降の未読イベント (user_returned, ac_power_connected 等) |
-| `ambient.context.get_policy` | 機微度分類と有効送信可否の診断情報 (実データは含まない) |
+| `ambient_context_get_states` | 現在のコンテキスト状態 (presence, battery, foreground app category 等) |
+| `ambient_context_poll_events` | クライアント別カーソル以降の未読イベント (user_returned, ac_power_connected 等) |
+| `ambient_context_get_policy` | 機微度分類と有効送信可否の診断情報 (実データは含まない) |
 
 ## クイックスタート
 
@@ -47,7 +47,7 @@ claude mcp add ambient-context \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
-6. Claude Code から `ambient.context.get_states` などが呼べます
+6. Claude Code から `ambient_context_get_states` などが呼べます
 
 ## ドキュメント
 

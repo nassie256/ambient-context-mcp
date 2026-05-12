@@ -21,16 +21,16 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 - **Off by default**: Medium / high sensitivity fields are not transmitted unless explicitly opted in
 - **Small footprint**: A single tray-resident process
 - **MCP Streamable HTTP**: Served at `http://127.0.0.1:37690/mcp`, Bearer token required
-- **Privacy diagnostics**: `ambient.context.get_policy` lets clients self-diagnose "why this value is not being sent"
+- **Privacy diagnostics**: `ambient_context_get_policy` lets clients self-diagnose "why this value is not being sent"
 - **Bilingual UI**: Japanese / English, follows OS culture by default; switchable from the settings dialog
 
 ## Three exposed tools
 
 | Tool | Description |
 |---|---|
-| `ambient.context.get_states` | Current context states (presence, battery, foreground app category, etc.) |
-| `ambient.context.poll_events` | Unread events past the per-client cursor (user_returned, ac_power_connected, etc.) |
-| `ambient.context.get_policy` | Sensitivity classifications and effective transmit decisions (no live data) |
+| `ambient_context_get_states` | Current context states (presence, battery, foreground app category, etc.) |
+| `ambient_context_poll_events` | Unread events past the per-client cursor (user_returned, ac_power_connected, etc.) |
+| `ambient_context_get_policy` | Sensitivity classifications and effective transmit decisions (no live data) |
 
 ## Quick start
 
@@ -48,9 +48,9 @@ claude mcp add ambient-context \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
-6. From Claude Code you can now call `ambient.context.get_states` and so on.
+6. From Claude Code you can now call `ambient_context_get_states` and so on.
 
-> **UI language**: defaults to your OS culture. To switch, open **MCP Server → Display language**, choose Japanese / English, save, and restart the app. The privacy classification rationales returned by `ambient.context.get_policy` follow the same setting.
+> **UI language**: defaults to your OS culture. To switch, open **MCP Server → Display language**, choose Japanese / English, save, and restart the app. The privacy classification rationales returned by `ambient_context_get_policy` follow the same setting.
 
 ## Documentation
 

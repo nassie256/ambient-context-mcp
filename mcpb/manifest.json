@@ -26,10 +26,7 @@
     "local"
   ],
   "compatibility": {
-    "platforms": ["win32"],
-    "runtimes": {
-      ".NET Desktop": ">=8.0"
-    }
+    "platforms": ["win32"]
   },
   "server": {
     "type": "binary",
@@ -42,15 +39,15 @@
   },
   "tools": [
     {
-      "name": "ambient.context.get_states",
+      "name": "ambient_context_get_states",
       "description": "Returns the latest ambient context states filtered by both the user's transmission policy and the client-supplied scope."
     },
     {
-      "name": "ambient.context.poll_events",
+      "name": "ambient_context_poll_events",
       "description": "Returns ambient context transition events (idle/return, AC connect/disconnect, foreground app changes) since the client's stored cursor."
     },
     {
-      "name": "ambient.context.get_policy",
+      "name": "ambient_context_get_policy",
       "description": "Returns the privacy classification table and effective transmission policy. Does not include sensitive context values."
     }
   ]

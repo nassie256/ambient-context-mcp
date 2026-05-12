@@ -193,8 +193,8 @@ internal static class Program
             if (line.StartsWith("data:", StringComparison.Ordinal))
             {
                 var payload = line.Length > 5 && line[5] == ' '
-                    ? line.AsSpan(6)
-                    : line.AsSpan(5);
+                    ? line.Substring(6)
+                    : line.Substring(5);
                 dataBuffer.Append(payload);
             }
         }
