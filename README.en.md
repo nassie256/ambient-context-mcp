@@ -36,7 +36,7 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 
 ### A. Claude Desktop (MCPB bundle)
 
-Download `ambient-context-mcp-vX.Y.Z.mcpb` from the [Releases](https://github.com/nassie256/ambient-context-mcp/releases) page and drag-and-drop it onto the Claude Desktop window. After confirming **Install**, Claude Desktop will auto-spawn the tray and the tools become available.
+Download `ambient-context-mcp-vX.Y.Z.mcpb` from the [Releases](https://github.com/nassie256/ambient-context-mcp/releases) page, then install it from Claude Desktop's **Settings → Extensions**. Once installed, Claude Desktop auto-spawns the tray and the tools become available.
 
 > The tray stays a single-process to preserve the single LocalContextHub. The MCPB bridge only spawns the tray if it isn't already running; otherwise it attaches to the existing one.
 
