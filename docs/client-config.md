@@ -64,7 +64,7 @@ curl -X POST http://127.0.0.1:37690/mcp \
   -H "Authorization: Bearer <TOKEN>" \
   --data '{
     "jsonrpc":"2.0","id":2,"method":"tools/call",
-    "params":{"name":"ambient.context.get_states","arguments":{}}
+    "params":{"name":"ambient_context_get_states","arguments":{}}
   }'
 ```
 
@@ -77,6 +77,6 @@ curl -X POST http://127.0.0.1:37690/mcp \
   -H "Authorization: Bearer <TOKEN>" \
   --data '{
     "jsonrpc":"2.0","id":3,"method":"tools/call",
-    "params":{"name":"ambient.context.get_policy","arguments":{}}
+    "params":{"name":"ambient_context_get_policy","arguments":{}}
   }'
 ```

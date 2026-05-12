@@ -21,19 +21,27 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 - **既定 OFF**: 機微度 medium / high の情報は明示的に opt-in しない限り送信されない
 - **小さいフットプリント**: タスクトレイ常駐の単一プロセス
 - **MCP Streamable HTTP**: `http://127.0.0.1:37690/mcp` で公開、Bearer トークン必須
-- **プライバシー診断ツール**: `ambient.context.get_policy` で「なぜこの値が出力されないか」をクライアントから自己診断可能
+- **プライバシー診断ツール**: `ambient_context_get_policy` で「なぜこの値が出力されないか」をクライアントから自己診断可能
 
 ## 公開する 3 ツール
 
 | ツール | 説明 |
 |---|---|
-| `ambient.context.get_states` | 現在のコンテキスト状態 (presence, battery, foreground app category 等) |
-| `ambient.context.poll_events` | クライアント別カーソル以降の未読イベント (user_returned, ac_power_connected 等) |
-| `ambient.context.get_policy` | 機微度分類と有効送信可否の診断情報 (実データは含まない) |
+| `ambient_context_get_states` | 現在のコンテキスト状態 (presence, battery, foreground app category 等) |
+| `ambient_context_poll_events` | クライアント別カーソル以降の未読イベント (user_returned, ac_power_connected 等) |
+| `ambient_context_get_policy` | 機微度分類と有効送信可否の診断情報 (実データは含まない) |
 
 ## クイックスタート
 
-アーカイブの内容を展開し、ambient-mcp.exe を実行してください。
+### A. Claude Desktop (MCPB バンドル)
+
+[Releases](https://github.com/nassie256/ambient-context-mcp/releases) から `ambient-context-mcp-vX.Y.Z.mcpb` をダウンロードし、Claude Desktop ウィンドウにドラッグ&ドロップ。確認ダイアログで `Install` を押すと、Claude Desktop が tray を自動 spawn してツールが使えるようになります。
+
+> tray は単一 LocalContextHub を保つために 1 プロセスのみ常駐します。MCPB はトレイ未起動時のみ spawn し、起動済みなら既存の tray にぶら下がります。
+
+### B. Claude Code / その他クライアント (Streamable HTTP)
+
+アーカイブ版 (`ambient-context-mcp-vX.Y.Z-win-x64.zip`) を展開し、`ambient-mcp.exe` を実行してください。
 
 1. アプリ起動 → タスクトレイに `[●] Ambient Context MCP — :37690` が表示
 2. トレイクリック → 設定ダイアログが開く
@@ -47,7 +55,7 @@ claude mcp add ambient-context \
   --header "Authorization: Bearer <TOKEN>"
 ```
 
-6. Claude Code から `ambient.context.get_states` などが呼べます
+6. Claude Code から `ambient_context_get_states` などが呼べます
 
 ## ドキュメント
 
@@ -67,11 +75,14 @@ claude mcp add ambient-context \
 # 開発ビルド
 dotnet build src\windows\AmbientContextMcp.sln
 
-# 配布用 (framework-dependent)
-dotnet publish src\windows\AmbientContextMcp\AmbientContextMcp.csproj `
-  -c Release -r win-x64 --self-contained false `
-  -o dist\ambient-context-mcp-win-x64-fwd
+# リリース成果物 (zip + .mcpb の両方を出力)
+pwsh tools\build-release.ps1                  # version は mcpb/manifest.json から
+pwsh tools\build-release.ps1 -Version 0.4.0   # 明示指定
+pwsh tools\build-release.ps1 -SkipZip         # mcpb のみ
+pwsh tools\build-release.ps1 -SkipMcpb        # zip のみ
 ```
+
+`mcpb validate` を有効にするには `npm i -g @anthropic-ai/mcpb` を先に入れてください。未インストール時は `Compress-Archive` フォールバックで `.mcpb` を作ります (manifest 検証はスキップ)。
 
 ## ファイル配置
 

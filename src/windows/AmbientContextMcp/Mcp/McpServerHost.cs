@@ -51,9 +51,9 @@ public sealed class McpServerHost
             },
             tools = new[]
             {
-                "ambient.context.get_policy",
-                "ambient.context.get_states",
-                "ambient.context.poll_events"
+                "ambient_context_get_policy",
+                "ambient_context_get_states",
+                "ambient_context_poll_events"
             }
         };
 

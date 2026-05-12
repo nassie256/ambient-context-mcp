@@ -9,7 +9,7 @@ namespace AmbientContextMcp.Core.Mcp;
 [McpServerToolType]
 public sealed class ContextTools
 {
-    [McpServerTool(Name = "ambient.context.get_policy", Title = "Get Ambient Context Transmission Policy", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [McpServerTool(Name = "ambient_context_get_policy", Title = "Get Ambient Context Transmission Policy", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Returns diagnostic metadata about Ambient Context MCP privacy classifications and effective transmission policy. This does not return sensitive context values; it explains which paths are allowed outbound by default or by user override.")]
     public static string GetPolicy(LocalContextHub hub)
     {
@@ -18,8 +18,8 @@ public sealed class ContextTools
         return JsonSerializer.Serialize(response, AmbientContextJson.Options);
     }
 
-    [McpServerTool(Name = "ambient.context.get_states", Title = "Get Ambient Context States", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Description("Returns the latest ambient context states. The response only includes items that satisfy BOTH (a) the user's transmission policy and (b) the client-supplied scope filter. The scope is the maximum sensitivity the client declares it can handle; raising it never bypasses the user's opt-in policy. Use ambient.context.get_policy to inspect what the user has allowed.")]
+    [McpServerTool(Name = "ambient_context_get_states", Title = "Get Ambient Context States", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Description("Returns the latest ambient context states. The response only includes items that satisfy BOTH (a) the user's transmission policy and (b) the client-supplied scope filter. The scope is the maximum sensitivity the client declares it can handle; raising it never bypasses the user's opt-in policy. Use ambient_context_get_policy to inspect what the user has allowed.")]
     public static string GetStates(
         LocalContextHub hub,
         [Description("Optional list of state names to return. Omit or pass an empty list to return all allowed states.")]
@@ -39,8 +39,8 @@ public sealed class ContextTools
         return JsonSerializer.Serialize(response, AmbientContextJson.Options);
     }
 
-    [McpServerTool(Name = "ambient.context.poll_events", Title = "Poll Ambient Context Events", ReadOnly = true, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description("Returns ambient context transition events such as idle/return, AC connect/disconnect, foreground app changes. By default this is a subscription-style call that returns events newer than the client's stored cursor and advances the cursor. When 'since' or 'until' is provided it becomes a stateless history query within that time range and the client cursor is NOT advanced, so the same range can be re-fetched. Filtering rules are the same as ambient.context.get_states: an event is returned only if it satisfies BOTH the user's transmission policy and the client-supplied scope.")]
+    [McpServerTool(Name = "ambient_context_poll_events", Title = "Poll Ambient Context Events", ReadOnly = true, Destructive = false, Idempotent = false, OpenWorld = false)]
+    [Description("Returns ambient context transition events such as idle/return, AC connect/disconnect, foreground app changes. By default this is a subscription-style call that returns events newer than the client's stored cursor and advances the cursor. When 'since' or 'until' is provided it becomes a stateless history query within that time range and the client cursor is NOT advanced, so the same range can be re-fetched. Filtering rules are the same as ambient_context_get_states: an event is returned only if it satisfies BOTH the user's transmission policy and the client-supplied scope.")]
     public static string PollEvents(
         LocalContextHub hub,
         [Description("Stable client identifier for cursor tracking. If omitted, a default MCP client id is used.")]
