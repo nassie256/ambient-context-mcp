@@ -35,7 +35,7 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 
 ### A. Claude Desktop (MCPB バンドル)
 
-[Releases](https://github.com/nassie256/ambient-context-mcp/releases) から `ambient-context-mcp-vX.Y.Z.mcpb` をダウンロードし、Claude Desktop ウィンドウにドラッグ&ドロップ。確認ダイアログで `Install` を押すと、Claude Desktop が tray を自動 spawn してツールが使えるようになります。
+[Releases](https://github.com/nassie256/ambient-context-mcp/releases) から `ambient-context-mcp-vX.Y.Z.mcpb` をダウンロードし、Claude Desktop の設定 → 拡張機能 からインストールしてください。インストール後、Claude Desktop が tray を自動 spawn してツールが使えるようになります。
 
 > tray は単一 LocalContextHub を保つために 1 プロセスのみ常駐します。MCPB はトレイ未起動時のみ spawn し、起動済みなら既存の tray にぶら下がります。
 
