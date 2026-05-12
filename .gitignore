@@ -30,3 +30,6 @@ Thumbs.db
 
 # Claude Code local-only instructions (per-developer, not shared)
 CLAUDE.local.md
+
+# Claude Code worktrees / per-developer state (never share between machines)
+.claude/
