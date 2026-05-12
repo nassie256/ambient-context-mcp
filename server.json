@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.nassie256/ambient-context-mcp",
   "title": "Ambient Context MCP",
-  "description": "Expose local Windows ambient context (presence, foreground app category, battery, power events, system load, long-session detection) as privacy-classified MCP tools. All data stays on 127.0.0.1; user opt-in is required for medium/high sensitivity context.",
+  "description": "Local Windows ambient context (presence, foreground app, battery) as privacy-gated MCP tools.",
   "version": "0.4.0",
   "repository": {
     "url": "https://github.com/nassie256/ambient-context-mcp",
