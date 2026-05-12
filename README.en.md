@@ -34,7 +34,15 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 
 ## Quick start
 
-Extract the archive and run `ambient-mcp.exe`.
+### A. Claude Desktop (MCPB bundle)
+
+Download `ambient-context-mcp-vX.Y.Z.mcpb` from the [Releases](https://github.com/nassie256/ambient-context-mcp/releases) page and drag-and-drop it onto the Claude Desktop window. After confirming **Install**, Claude Desktop will auto-spawn the tray and the tools become available.
+
+> The tray stays a single-process to preserve the single LocalContextHub. The MCPB bridge only spawns the tray if it isn't already running; otherwise it attaches to the existing one.
+
+### B. Claude Code / other clients (Streamable HTTP)
+
+Extract the archive (`ambient-context-mcp-vX.Y.Z-win-x64.zip`) and run `ambient-mcp.exe`.
 
 1. Launch the app → the tray shows `[●] Ambient Context MCP — :37690`
 2. Click the tray icon → the settings dialog opens
@@ -70,11 +78,14 @@ claude mcp add ambient-context \
 # Dev build
 dotnet build src\windows\AmbientContextMcp.sln
 
-# Distribution (framework-dependent)
-dotnet publish src\windows\AmbientContextMcp\AmbientContextMcp.csproj `
-  -c Release -r win-x64 --self-contained false `
-  -o dist\ambient-context-mcp-win-x64-fwd
+# Release artifacts (produces both the zip and the .mcpb)
+pwsh tools\build-release.ps1                  # version is read from mcpb/manifest.json
+pwsh tools\build-release.ps1 -Version 0.4.0   # explicit
+pwsh tools\build-release.ps1 -SkipZip         # mcpb only
+pwsh tools\build-release.ps1 -SkipMcpb        # zip only
 ```
+
+To enable `mcpb validate`, install the CLI first with `npm i -g @anthropic-ai/mcpb`. Without it, the script falls back to `Compress-Archive` to build the `.mcpb` (manifest validation is skipped).
 
 ## File layout
 

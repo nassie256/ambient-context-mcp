@@ -33,7 +33,15 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 
 ## クイックスタート
 
-アーカイブの内容を展開し、ambient-mcp.exe を実行してください。
+### A. Claude Desktop (MCPB バンドル)
+
+[Releases](https://github.com/nassie256/ambient-context-mcp/releases) から `ambient-context-mcp-vX.Y.Z.mcpb` をダウンロードし、Claude Desktop ウィンドウにドラッグ&ドロップ。確認ダイアログで `Install` を押すと、Claude Desktop が tray を自動 spawn してツールが使えるようになります。
+
+> tray は単一 LocalContextHub を保つために 1 プロセスのみ常駐します。MCPB はトレイ未起動時のみ spawn し、起動済みなら既存の tray にぶら下がります。
+
+### B. Claude Code / その他クライアント (Streamable HTTP)
+
+アーカイブ版 (`ambient-context-mcp-vX.Y.Z-win-x64.zip`) を展開し、`ambient-mcp.exe` を実行してください。
 
 1. アプリ起動 → タスクトレイに `[●] Ambient Context MCP — :37690` が表示
 2. トレイクリック → 設定ダイアログが開く
@@ -67,11 +75,14 @@ claude mcp add ambient-context \
 # 開発ビルド
 dotnet build src\windows\AmbientContextMcp.sln
 
-# 配布用 (framework-dependent)
-dotnet publish src\windows\AmbientContextMcp\AmbientContextMcp.csproj `
-  -c Release -r win-x64 --self-contained false `
-  -o dist\ambient-context-mcp-win-x64-fwd
+# リリース成果物 (zip + .mcpb の両方を出力)
+pwsh tools\build-release.ps1                  # version は mcpb/manifest.json から
+pwsh tools\build-release.ps1 -Version 0.4.0   # 明示指定
+pwsh tools\build-release.ps1 -SkipZip         # mcpb のみ
+pwsh tools\build-release.ps1 -SkipMcpb        # zip のみ
 ```
+
+`mcpb validate` を有効にするには `npm i -g @anthropic-ai/mcpb` を先に入れてください。未インストール時は `Compress-Archive` フォールバックで `.mcpb` を作ります (manifest 検証はスキップ)。
 
 ## ファイル配置
 
