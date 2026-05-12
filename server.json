@@ -1,5 +1,5 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.nassie256/ambient-context-mcp",
   "title": "Ambient Context MCP",
   "description": "Local Windows ambient context (presence, foreground app, battery) as privacy-gated MCP tools.",
