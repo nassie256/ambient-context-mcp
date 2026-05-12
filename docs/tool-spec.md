@@ -4,7 +4,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 
 ## ツール一覧
 
-### `ambient.context.get_policy`
+### `ambient_context_get_policy`
 
 機微度分類と有効送信可否の診断情報を返します。**実データの値や payload は返しません**。MCP クライアントは medium/high scope を指定しても値が増えない理由を「ユーザー送信ポリシーで許可されていない」と説明できます。
 
@@ -51,9 +51,9 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 }
 ```
 
-### `ambient.context.get_states`
+### `ambient_context_get_states`
 
-設定済み送信ポリシーを通った最新状態のみを返します。クライアント側 scope はクライアントが「自分はこの機微度まで扱える」と申告する値で、応答に含まれるのは「ユーザー送信ポリシーで許可された項目」と「指定 scope 範囲に収まる機微度の項目」**両方を満たすもの**だけです。scope を上げても、ユーザーが許可していない項目は決して出力されません。実際に何が許可されているかは `ambient.context.get_policy` で確認できます。
+設定済み送信ポリシーを通った最新状態のみを返します。クライアント側 scope はクライアントが「自分はこの機微度まで扱える」と申告する値で、応答に含まれるのは「ユーザー送信ポリシーで許可された項目」と「指定 scope 範囲に収まる機微度の項目」**両方を満たすもの**だけです。scope を上げても、ユーザーが許可していない項目は決して出力されません。実際に何が許可されているかは `ambient_context_get_policy` で確認できます。
 
 **Input**:
 
@@ -81,7 +81,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 }
 ```
 
-### `ambient.context.poll_events`
+### `ambient_context_poll_events`
 
 イベントを返します。2 つの呼び出しモードがあり、**`since` / `until` のいずれかを指定すると stateless な history query 扱い**となります。重複抑制と送信フィルタは `get_states` と同じく「ユーザー送信ポリシーで許可された項目」と「指定 scope 範囲に収まる機微度の項目」の AND。scope を高くしてもユーザーが許可していないイベントは出力されません。
 
@@ -174,7 +174,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 要点:
 - **scope を上げてもユーザーポリシーは上書きできない** — opt-in されていない medium/high 項目は決して出力されない
 - **scope が低いと、ユーザーが許可していても応答に含まれない** — クライアント側で扱う準備のない機微度を取りに行かないための安全装置
-- scope を高くしても何も増えない場合は、ユーザー側の送信ポリシーを `ambient.context.get_policy` で確認
+- scope を高くしても何も増えない場合は、ユーザー側の送信ポリシーを `ambient_context_get_policy` で確認
 
 ## 認証
 
