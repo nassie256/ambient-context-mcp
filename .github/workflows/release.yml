@@ -18,6 +18,11 @@ jobs:
   build:
     runs-on: windows-latest
 
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      mcpb_sha256: ${{ steps.hashes.outputs.mcpb_sha256 }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -117,3 +122,56 @@ jobs:
             --notes-file '${{ steps.notes.outputs.path }}' `
             "dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}-win-x64.zip" `
             "dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}.mcpb"
+
+  publish-registry:
+    # Publishes server.json to the official MCP Registry
+    # (https://registry.modelcontextprotocol.io). Only runs on real tag pushes;
+    # workflow_dispatch runs stop after `build` for dry-running the artifacts.
+    # The registry rejects re-publishes of the same version, so a failure here
+    # forces a patch bump rather than a retry on the same tag.
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # for `mcp-publisher login github-oidc`
+      contents: read
+
+    env:
+      MCP_PUBLISHER_VERSION: v1.7.8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install mcp-publisher (pinned)
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Rewrite server.json for this release
+        env:
+          VERSION:    ${{ needs.build.outputs.version }}
+          TAG:        ${{ needs.build.outputs.tag }}
+          MCPB_SHA:   ${{ needs.build.outputs.mcpb_sha256 }}
+          IDENTIFIER: https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/ambient-context-mcp-${{ needs.build.outputs.tag }}.mcpb
+        run: |
+          jq \
+            --arg v "$VERSION" \
+            --arg id "$IDENTIFIER" \
+            --arg sha "$MCPB_SHA" \
+            '.version = $v
+             | .packages[0].version = $v
+             | .packages[0].identifier = $id
+             | .packages[0].fileSha256 = $sha' \
+            server.json > server.tmp
+          mv server.tmp server.json
+          echo "--- server.json after rewrite ---"
+          cat server.json
+
+      - name: Authenticate to MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
