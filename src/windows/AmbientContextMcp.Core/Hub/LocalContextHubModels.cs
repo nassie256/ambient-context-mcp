@@ -50,6 +50,13 @@ public sealed class LocalContextPollRequest
     /// 指定すると ObservedAt &lt;= Until のイベントのみを返す。
     /// </summary>
     public DateTimeOffset? Until { get; init; }
+
+    /// <summary>
+    /// false の場合、各イベントから <c>payload</c> / <c>payloadSensitivity</c> を取り除いた要約形式で返す。
+    /// 一覧スキャン目的のクライアントが大量取得時のレスポンスサイズを抑えるためのスイッチ。
+    /// 既定 true (= 従来挙動)。
+    /// </summary>
+    public bool IncludePayload { get; init; } = true;
 }
 
 public sealed class LocalContextPollResponse

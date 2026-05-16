@@ -56,7 +56,9 @@ public sealed class ContextTools
         [Description("Optional ISO 8601 timestamp (e.g. 2026-05-10T00:00:00+09:00). When provided, only events with observedAt >= since are returned, the call becomes a stateless history query (the client cursor is NOT advanced), and an absent client cursor starts at the oldest retained event instead of the latest.")]
         string since = "",
         [Description("Optional ISO 8601 timestamp (e.g. 2026-05-10T23:59:59+09:00). When provided, only events with observedAt <= until are returned; same stateless semantics as 'since'.")]
-        string until = "")
+        string until = "",
+        [Description("If false, omit 'payload' and 'payloadSensitivity' from each event to reduce response size when scanning large ranges. The event's id, sequence, observedAt, name, value, sensitivity, and maxFieldSensitivity are preserved. Default true.")]
+        bool includePayload = true)
     {
         ArgumentNullException.ThrowIfNull(hub);
         var response = hub.PollEvents(new LocalContextPollRequest
@@ -67,7 +69,8 @@ public sealed class ContextTools
             Scopes = scopes ?? [],
             Limit = limit,
             Since = ParseOptionalTimestamp(since, nameof(since)),
-            Until = ParseOptionalTimestamp(until, nameof(until))
+            Until = ParseOptionalTimestamp(until, nameof(until)),
+            IncludePayload = includePayload
         });
         return JsonSerializer.Serialize(response, AmbientContextJson.Options);
     }

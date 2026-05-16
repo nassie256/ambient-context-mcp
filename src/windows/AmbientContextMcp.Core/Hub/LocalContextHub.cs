@@ -175,7 +175,7 @@ public sealed class LocalContextHub
                 .Where(item => IsNameIncluded(item.Name, request.Names))
                 .Select(item => FilterEventForScope(item, request.Scopes))
                 .Where(item => item is not null)
-                .Select(item => item!)
+                .Select(item => request.IncludePayload ? item! : StripPayload(item!))
                 .Take(limit + 1)
                 .ToList();
 
@@ -828,6 +828,25 @@ public sealed class LocalContextHub
         IReadOnlyList<PrivacyClassification> classifications,
         IReadOnlyDictionary<string, bool> overrides) =>
         ComputePolicyVersion(classifications, overrides);
+
+    /// <summary>
+    /// 要約モードで返すために payload と payloadSensitivity を空にした複製を作る。
+    /// id / sequence / observedAt / name / value / sensitivity / maxFieldSensitivity は保持する。
+    /// </summary>
+    private static LocalContextEvent StripPayload(LocalContextEvent ev)
+    {
+        return new LocalContextEvent
+        {
+            Id = ev.Id,
+            Sequence = ev.Sequence,
+            ObservedAt = ev.ObservedAt,
+            Name = ev.Name,
+            Value = ev.Value,
+            Sensitivity = ev.Sensitivity,
+            MaxFieldSensitivity = ev.MaxFieldSensitivity
+            // Payload / PayloadSensitivity は init 既定の空 dict のまま
+        };
+    }
 
     private static int GetAllowedLevel(IReadOnlyList<string> scopes)
     {
