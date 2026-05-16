@@ -37,9 +37,12 @@ public sealed partial class WindowsAmbientContextService
 
     private void EvaluateForegroundTransitions(ForegroundAppContext foreground)
     {
-        if (string.IsNullOrWhiteSpace(_lastForegroundCategory))
+        // Category="" は「該当データなし」の正規値なので空文字で未初期化判定をしてはいけない。
+        // 初期化フラグでベースライン取得と通常遷移を分ける。
+        if (!_foregroundCategoryInitialized)
         {
             _lastForegroundCategory = foreground.Category;
+            _foregroundCategoryInitialized = true;
             return;
         }
 
@@ -304,10 +307,12 @@ public sealed partial class WindowsAmbientContextService
 
     private static Dictionary<string, string> TransitionData(string previous, string current)
     {
+        // 「該当データなし」は空文字でそのまま返す。集計時に "" / 欠落 / "unknown" の 3 系統が
+        // 混在しないようにする方針 (AmbientTier1Rules.ClassifyApp と同じ整合)。
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["from"] = string.IsNullOrWhiteSpace(previous) ? "unknown" : previous,
-            ["to"] = string.IsNullOrWhiteSpace(current) ? "unknown" : current
+            ["from"] = previous,
+            ["to"] = current
         };
     }
 

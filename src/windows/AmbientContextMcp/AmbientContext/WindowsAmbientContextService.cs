@@ -80,6 +80,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     private bool _sessionLocked;
     private string _lastPresenceBucket = "";
     private string _lastForegroundCategory = "";
+    private bool _foregroundCategoryInitialized;
     private string _lastBatteryBucket = "unknown";
     private int? _lastBatteryPercent;
     private bool? _lastCharging;
