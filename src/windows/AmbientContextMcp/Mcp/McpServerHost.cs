@@ -49,9 +49,13 @@ public sealed class McpServerHost
             {
                 mcp = "POST/GET /mcp"
             },
+            // 実 MCP サーバは Program.cs の WithTools<ContextTools>() で属性スキャン登録するため、
+            // この配列は静的に手書きしている。新規 [McpServerTool] を増やしたらここも追加すること
+            // (drift 検出の自動化は未実装)。
             tools = new[]
             {
                 "ambient_context_get_policy",
+                "ambient_context_describe_events",
                 "ambient_context_get_states",
                 "ambient_context_poll_events"
             }
