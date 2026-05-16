@@ -66,7 +66,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 ```
 
 - `names` 任意。省略時は許可済みの全 `outboundStates`
-- `scopes` 任意。省略時は `context.low:read` 相当 (= 低機微項目のみ)
+- `scopes` 任意。省略時は `context.low:read` 相当 (= 低機微項目のみ)。`context.all:read` を渡すと「ユーザーが許可している範囲をすべて」になり、`context.high:read` と等価
 
 **Output**:
 
@@ -77,7 +77,8 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
   "states": [
     { "observedAt": "...", "name": "presence.bucket", "value": "active", "sensitivity": "low" },
     { "observedAt": "...", "name": "battery.percent", "value": "87", "sensitivity": "low" }
-  ]
+  ],
+  "policyVersion": "Ab12-cD34_ef"
 }
 ```
 
@@ -114,16 +115,19 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
       "id": "evt_20260504_101501_000042",
       "sequence": 42,
       "observedAt": "2026-05-04T10:15:01+09:00",
-      "name": "ac_power_connected",
-      "value": "ac",
-      "payload": { "from": "battery", "to": "ac" },
-      "sensitivity": "low"
+      "name": "media_session_changed",
+      "value": "Imagine",
+      "payload": { "title": "Imagine", "source_app": "Chrome" },
+      "sensitivity": "medium",
+      "payloadSensitivity": { "title": "high", "source_app": "medium" },
+      "maxFieldSensitivity": "high"
     }
   ],
   "nextCursor": "...",
   "hasMore": false,
   "cursorExpired": false,
-  "retention": { "maxAgeHours": 24, "maxEvents": 500 }
+  "retention": { "maxAgeHours": 24, "maxEvents": 500 },
+  "policyVersion": "Ab12-cD34_ef"
 }
 ```
 
@@ -175,6 +179,23 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
 - **scope を上げてもユーザーポリシーは上書きできない** — opt-in されていない medium/high 項目は決して出力されない
 - **scope が低いと、ユーザーが許可していても応答に含まれない** — クライアント側で扱う準備のない機微度を取りに行かないための安全装置
 - scope を高くしても何も増えない場合は、ユーザー側の送信ポリシーを `ambient_context_get_policy` で確認
+
+## policyVersion
+
+`get_states` と `poll_events` の応答に含まれる短いハッシュ。`privacyClassifications` と `pathTransmitOverrides` の合成から導出され、ポリシーに変化があった場合にのみ値が変わります。
+
+- 推奨利用: クライアントは前回受け取った `policyVersion` を保持し、変化したときだけ `ambient_context_get_policy` を呼び直す
+- 値は不透明文字列 (約 12 文字)。バイト単位の意味はなく、等値比較のみが意味を持つ
+- 同じプロセス内で `policyVersion` が同じ間は、同じ scope 指定で得られるフィールド集合も変わらない (= キャッシュ可能)
+
+## payload 内の機微度
+
+`poll_events` の各イベントには次の 2 フィールドが付与されます:
+
+- `payloadSensitivity`: payload の各キーごとの機微度 (`"title": "high"` など)。該当 classification が無いキーは event-level `sensitivity` を継承
+- `maxFieldSensitivity`: event-level `sensitivity` と `payloadSensitivity` のうち最も高いもの
+
+scope が `maxFieldSensitivity` より低いと、payload はキー単位で間引かれて返ります。event 自体は `sensitivity` がスコープ内である限り削除されません。「event は通ったのに payload の一部キーが消えている」場合は、上位 scope (例: `context.high:read`) を渡せば取れる可能性があります。
 
 ## 認証
 
