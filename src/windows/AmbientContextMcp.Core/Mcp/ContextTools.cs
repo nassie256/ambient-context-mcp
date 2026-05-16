@@ -19,12 +19,12 @@ public sealed class ContextTools
     }
 
     [McpServerTool(Name = "ambient_context_get_states", Title = "Get Ambient Context States", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Description("Returns the latest ambient context states. The response only includes items that satisfy BOTH (a) the user's transmission policy and (b) the client-supplied scope filter. The scope is the maximum sensitivity the client declares it can handle; raising it never bypasses the user's opt-in policy. Use ambient_context_get_policy to inspect what the user has allowed.")]
+    [Description("Returns the latest ambient context states. The response only includes items that satisfy BOTH (a) the user's transmission policy and (b) the client-supplied scope filter. The scope is the maximum sensitivity the client declares it can handle; raising it never bypasses the user's opt-in policy. The response includes a 'policyVersion' hash — clients can skip calling ambient_context_get_policy until that value changes. Use 'context.all:read' as a shorthand for 'I can handle anything the user permits'.")]
     public static string GetStates(
         LocalContextHub hub,
         [Description("Optional list of state names to return. Omit or pass an empty list to return all allowed states.")]
         string[]? names = null,
-        [Description("Optional MCP context scopes declaring the maximum sensitivity this client handles: context.low:read, context.medium:read, or context.high:read. Default is context.low:read. Raising the scope only widens the response within what the user has already opted in to; it cannot bypass the user's transmission policy.")]
+        [Description("Optional MCP context scopes declaring the maximum sensitivity this client handles: context.low:read, context.medium:read, context.high:read, or context.all:read (alias for high). Default is context.low:read. Raising the scope only widens the response within what the user has already opted in to; it cannot bypass the user's transmission policy.")]
         string[]? scopes = null,
         [Description("Whether to include state metadata such as sensitivity and observed_at.")]
         bool includeMetadata = true)
@@ -40,7 +40,7 @@ public sealed class ContextTools
     }
 
     [McpServerTool(Name = "ambient_context_poll_events", Title = "Poll Ambient Context Events", ReadOnly = true, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description("Returns ambient context transition events such as idle/return, AC connect/disconnect, foreground app changes. By default this is a subscription-style call that returns events newer than the client's stored cursor and advances the cursor. When 'since' or 'until' is provided it becomes a stateless history query within that time range and the client cursor is NOT advanced, so the same range can be re-fetched. Filtering rules are the same as ambient_context_get_states: an event is returned only if it satisfies BOTH the user's transmission policy and the client-supplied scope.")]
+    [Description("Returns ambient context transition events such as idle/return, AC connect/disconnect, foreground app changes. By default this is a subscription-style call that returns events newer than the client's stored cursor and advances the cursor. When 'since' or 'until' is provided it becomes a stateless history query within that time range and the client cursor is NOT advanced, so the same range can be re-fetched. Each event also reports per-payload-key sensitivity ('payloadSensitivity') and the worst-case 'maxFieldSensitivity', so a client can tell at a glance whether raising its scope would reveal more fields. The response includes a 'policyVersion' hash — clients can skip calling ambient_context_get_policy until that value changes.")]
     public static string PollEvents(
         LocalContextHub hub,
         [Description("Stable client identifier for cursor tracking. If omitted, a default MCP client id is used.")]
@@ -49,7 +49,7 @@ public sealed class ContextTools
         string cursor = "",
         [Description("Optional list of event names to return. Omit or pass an empty list to return all allowed events.")]
         string[]? names = null,
-        [Description("Optional MCP context scopes: context.low:read, context.medium:read, or context.high:read. Higher scopes reveal only medium/high events that the user's transmission policy already permits.")]
+        [Description("Optional MCP context scopes: context.low:read, context.medium:read, context.high:read, or context.all:read (alias for high). Higher scopes reveal only medium/high data that the user's transmission policy already permits. Payload keys above the requested scope are dropped individually while the event itself can still be delivered if its event-level sensitivity is within scope.")]
         string[]? scopes = null,
         [Description("Maximum number of events to return. Default is 50; server caps at 1000.")]
         int limit = 50,
