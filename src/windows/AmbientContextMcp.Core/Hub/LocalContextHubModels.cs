@@ -120,6 +120,20 @@ public sealed class LocalContextEvent
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     public string Sensitivity { get; init; } = "low";
+
+    /// <summary>
+    /// payload キーごとの機微度。Ingest 時に PrivacyClassifications から導出される。
+    /// 該当 classification が無いキーは event-level <see cref="Sensitivity"/> を継承する。
+    /// 古い events.jsonl から復元した場合は空 dict になり、フィルタは event-level Sensitivity にフォールバックする。
+    /// </summary>
+    public IReadOnlyDictionary<string, string> PayloadSensitivity { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// event-level Sensitivity と payload キー機微度のうち最も高いもの。
+    /// クライアントが scope を判断するための一次サマリ。空文字列の場合は Sensitivity を参照する。
+    /// </summary>
+    public string MaxFieldSensitivity { get; init; } = "";
 }
 
 public sealed class LocalContextRetentionInfo
