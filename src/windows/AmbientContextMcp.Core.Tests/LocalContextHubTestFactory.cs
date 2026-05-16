@@ -39,5 +39,8 @@ internal static class LocalContextHubTestFactory
 
         public UiSettings LoadUiSettings() => new();
         public void SaveUiSettings(UiSettings settings) { }
+
+        public TransientStateSettings LoadTransientStateSettings() => new();
+        public void SaveTransientStateSettings(TransientStateSettings settings) { }
     }
 }

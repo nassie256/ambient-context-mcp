@@ -86,6 +86,16 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         Save(current => current.Ui = settings);
     }
 
+    public TransientStateSettings LoadTransientStateSettings()
+    {
+        return Load().TransientState ?? new TransientStateSettings();
+    }
+
+    public void SaveTransientStateSettings(TransientStateSettings settings)
+    {
+        Save(current => current.TransientState = settings);
+    }
+
     public static string GetDefaultPath()
     {
         return Path.Combine(
@@ -157,5 +167,7 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         public SettingsWindowStatus? SettingsWindow { get; set; }
 
         public UiSettings? Ui { get; set; }
+
+        public TransientStateSettings? TransientState { get; set; }
     }
 }

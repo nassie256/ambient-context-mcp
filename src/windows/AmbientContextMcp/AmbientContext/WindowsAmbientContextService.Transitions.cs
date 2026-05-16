@@ -1,4 +1,5 @@
 using AmbientContextMcp.Core.Models;
+using AmbientContextMcp.Core.Settings;
 
 namespace AmbientContextMcp.AmbientContext;
 
@@ -242,6 +243,7 @@ public sealed partial class WindowsAmbientContextService
         if (!IsBreakPresence(presence.Bucket) && _lastActivityDate != DateOnly.FromDateTime(observedAt.DateTime))
         {
             _lastActivityDate = DateOnly.FromDateTime(observedAt.DateTime);
+            PersistLastActivityDate(_lastActivityDate.Value);
             AddEvent("first_activity_today");
         }
 
@@ -256,6 +258,26 @@ public sealed partial class WindowsAmbientContextService
         else if (wellness.ContinuousActiveMinutes < LongSessionWarningMinutes)
         {
             _longSessionWarningActive = false;
+        }
+    }
+
+    /// <summary>
+    /// first_activity_today を発火したローカル日を永続化する。プロセス再起動を跨いで
+    /// 同日中の再発火を抑止する。永続化に失敗してもイベント発火自体は止めない (best-effort)。
+    /// </summary>
+    private void PersistLastActivityDate(DateOnly date)
+    {
+        try
+        {
+            _settingsStore.SaveTransientStateSettings(new TransientStateSettings
+            {
+                SchemaVersion = 1,
+                LastActivityDate = date
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist LastActivityDate; first_activity_today may re-fire on next restart.");
         }
     }
 

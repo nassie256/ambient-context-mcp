@@ -111,6 +111,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         _snapshotPath = snapshotPath ?? GetDefaultSnapshotPath();
         _foregroundProc = OnForegroundEvent;
         _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore, GetPrivacyClassificationsForUi());
+        _lastActivityDate = _settingsStore.LoadTransientStateSettings().LastActivityDate;
         _messageWindow.MessageReceived += OnMessageReceived;
     }
 
