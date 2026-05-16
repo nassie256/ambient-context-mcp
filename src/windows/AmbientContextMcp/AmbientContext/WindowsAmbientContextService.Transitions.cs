@@ -162,6 +162,7 @@ public sealed partial class WindowsAmbientContextService
             AddEvent("media_session_changed", new Dictionary<string, string>
             {
                 ["source_app"] = media.SourceAppUserModelId,
+                ["source_kind"] = MediaSourceKindClassifier.Classify(media.SourceAppUserModelId),
                 ["playback_status"] = media.PlaybackStatus,
                 ["title"] = media.Title,
                 ["artist"] = media.Artist

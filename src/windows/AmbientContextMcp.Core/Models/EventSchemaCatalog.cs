@@ -187,6 +187,7 @@ public static class EventSchemaCatalog
                 "Windows SMTC のメディアセッション情報 (曲・動画タイトル等) が変わった瞬間。title / artist は別 path (.title / .artist) で個別に高機微分類されており、ユーザー opt-in と context.high:read scope の両方が必要。",
                 "Fires when SMTC media session details change. title / artist are classified high under separate paths and require both user opt-in and context.high:read scope.",
                 Key("source_app", "medium", "再生元アプリの AppUserModelId (例: Spotify, Chrome タブ)。", "AppUserModelId of the source app (e.g. Spotify, a Chrome tab).", "Spotify.exe"),
+                Key("source_kind", "medium", "source_app から推定したメディア種別: \"music\" / \"video\" / \"browser\" / \"unknown\"。ブラウザはタブの中身が判定できないため別カテゴリ。ヒューリスティックなので誤分類はあり得る。", "Coarse media kind inferred from source_app: \"music\" / \"video\" / \"browser\" / \"unknown\". Browser is its own category since tab contents can't be inspected. Heuristic — misclassification is possible.", "music"),
                 Key("playback_status", "medium", "Playing / Paused / Stopped。", "Playing / Paused / Stopped.", "Playing"),
                 Key("title", "high", "曲名 / 動画タイトル。視聴履歴そのもの。", "Track / video title. Reveals listening / viewing history.", "Imagine"),
                 Key("artist", "high", "アーティスト / 出演者。", "Artist or performer.", "John Lennon")),
