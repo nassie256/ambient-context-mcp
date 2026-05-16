@@ -594,14 +594,7 @@ public sealed class LocalContextHub
     private static bool IsSensitivityAllowed(string sensitivity, IReadOnlyList<string> scopes)
     {
         var requestedLevel = GetSensitivityLevel(sensitivity);
-        var allowedLevel = scopes switch
-        {
-            var value when value.Contains("context.high:read", StringComparer.OrdinalIgnoreCase) => 3,
-            var value when value.Contains("context.medium:read", StringComparer.OrdinalIgnoreCase) => 2,
-            var value when value.Contains("context.low:read", StringComparer.OrdinalIgnoreCase) => 1,
-            _ => 1
-        };
-
+        var allowedLevel = GetAllowedLevel(scopes);
         return requestedLevel <= allowedLevel;
     }
 
