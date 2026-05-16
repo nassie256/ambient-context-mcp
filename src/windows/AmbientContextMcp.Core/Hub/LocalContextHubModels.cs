@@ -18,6 +18,13 @@ public sealed class LocalContextStateResponse
     public IReadOnlyList<AmbientState> States { get; init; } = [];
 
     public string Source { get; init; } = "outboundStates";
+
+    /// <summary>
+    /// クライアントが get_policy を再取得すべきかを判定するための短いハッシュ。
+    /// privacyClassifications と pathTransmitOverrides の合成から導出され、
+    /// ポリシーに変化があった場合にのみ値が変わる。
+    /// </summary>
+    public string PolicyVersion { get; init; } = "";
 }
 
 public sealed class LocalContextPollRequest
@@ -56,6 +63,12 @@ public sealed class LocalContextPollResponse
     public bool CursorExpired { get; init; }
 
     public LocalContextRetentionInfo Retention { get; init; } = new();
+
+    /// <summary>
+    /// LocalContextStateResponse.PolicyVersion と同一値。クライアントは前回の値と比較して
+    /// 変化があるときだけ get_policy を再取得すればよい。
+    /// </summary>
+    public string PolicyVersion { get; init; } = "";
 }
 
 public sealed class LocalContextPolicyResponse

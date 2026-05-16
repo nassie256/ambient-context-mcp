@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AmbientContextMcp.Core.Models;
@@ -45,6 +46,7 @@ public sealed class LocalContextHub
     private int _maxEventCount = DefaultMaxEventCount;
     private bool _persistEventLog;
     private long _nextSequence;
+    private string _policyVersion = "";
 
     public event EventHandler<LocalContextEvent>? EventPublished;
 
@@ -69,6 +71,9 @@ public sealed class LocalContextHub
             _latestStates = snapshot.OutboundStates.ToList();
             _privacyClassifications = snapshot.PrivacyClassifications.ToList();
             _transmissionPolicy = snapshot.TransmissionPolicy;
+            _policyVersion = ComputePolicyVersion(
+                _privacyClassifications,
+                _transmissionPolicy.PathTransmitOverrides);
             _observedStateCount = snapshot.States.Count;
             _outboundStateCount = snapshot.OutboundStates.Count;
             _internalEventHistoryCount = snapshot.Events.Count;
@@ -139,7 +144,8 @@ public sealed class LocalContextHub
             return new LocalContextStateResponse
             {
                 ObservedAt = _latestObservedAt,
-                States = states
+                States = states,
+                PolicyVersion = _policyVersion
             };
         }
     }
@@ -189,7 +195,8 @@ public sealed class LocalContextHub
                 {
                     MaxAgeHours = _maxEventAgeHours,
                     MaxEvents = _maxEventCount
-                }
+                },
+                PolicyVersion = _policyVersion
             };
         }
     }
@@ -749,6 +756,38 @@ public sealed class LocalContextHub
             MaxFieldSensitivity = LevelToSensitivity(maxLevel)
         };
     }
+
+    private static string ComputePolicyVersion(
+        IReadOnlyList<PrivacyClassification> classifications,
+        IReadOnlyDictionary<string, bool> overrides)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var item in classifications.OrderBy(c => c.Path, StringComparer.OrdinalIgnoreCase))
+        {
+            sb.Append("c|").Append(item.Path).Append('|')
+              .Append(NormalizeSensitivity(item.Sensitivity)).Append('|')
+              .Append(item.DefaultTransmit ? '1' : '0').Append('\n');
+        }
+
+        foreach (var pair in overrides.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            sb.Append("o|").Append(pair.Key).Append('|')
+              .Append(pair.Value ? '1' : '0').Append('\n');
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        // 9 バイト = base64url で 12 文字。衝突確率は実用上ゼロで、人間が見ても読みやすい長さ。
+        return Convert.ToBase64String(hash, 0, 9)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    public static string ComputePolicyVersionForTest(
+        IReadOnlyList<PrivacyClassification> classifications,
+        IReadOnlyDictionary<string, bool> overrides) =>
+        ComputePolicyVersion(classifications, overrides);
 
     private static int GetAllowedLevel(IReadOnlyList<string> scopes)
     {
