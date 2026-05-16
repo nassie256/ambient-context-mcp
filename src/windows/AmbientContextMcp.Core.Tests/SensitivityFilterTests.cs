@@ -162,3 +162,96 @@ public class SensitivityFilterTests
         Assert.True(filtered!.Payload.ContainsKey("to"));
     }
 }
+
+public class HubIngestTests
+{
+    [Fact]
+    public void Ingest_populates_payload_sensitivity_from_classifications()
+    {
+        var hub = LocalContextHubTestFactory.CreateInMemory();
+        var observedAt = DateTimeOffset.UtcNow;
+
+        var snapshot = new AmbientContextSnapshot
+        {
+            ObservedAt = observedAt,
+            PrivacyClassifications =
+            [
+                new() { Path = "events.media_session_changed", Sensitivity = "medium", DefaultTransmit = false },
+                new() { Path = "events.media_session_changed.title", Sensitivity = "high", DefaultTransmit = false }
+            ],
+            OutboundEvents =
+            [
+                new()
+                {
+                    ObservedAt = observedAt,
+                    Name = "media_session_changed",
+                    Value = "Imagine",
+                    Payload = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "title", "Imagine" },
+                        { "source_app", "Chrome" }
+                    },
+                    Sensitivity = "medium"
+                }
+            ]
+        };
+
+        hub.Ingest(snapshot);
+
+        var poll = hub.PollEvents(new LocalContextPollRequest
+        {
+            ClientId = "test",
+            Scopes = ["context.high:read"],
+            Since = observedAt.AddMinutes(-1)
+        });
+
+        var ev = Assert.Single(poll.Events);
+        Assert.Equal("high", ev.PayloadSensitivity["title"]);
+        Assert.Equal("medium", ev.PayloadSensitivity["source_app"]);
+        Assert.Equal("high", ev.MaxFieldSensitivity);
+    }
+
+    [Fact]
+    public void PollEvents_with_medium_scope_strips_high_payload_keys_but_keeps_event()
+    {
+        var hub = LocalContextHubTestFactory.CreateInMemory();
+        var observedAt = DateTimeOffset.UtcNow;
+
+        hub.Ingest(new AmbientContextSnapshot
+        {
+            ObservedAt = observedAt,
+            PrivacyClassifications =
+            [
+                new() { Path = "events.media_session_changed", Sensitivity = "medium", DefaultTransmit = false },
+                new() { Path = "events.media_session_changed.title", Sensitivity = "high", DefaultTransmit = false }
+            ],
+            OutboundEvents =
+            [
+                new()
+                {
+                    ObservedAt = observedAt,
+                    Name = "media_session_changed",
+                    Value = "Imagine",
+                    Payload = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "title", "Imagine" },
+                        { "source_app", "Chrome" }
+                    },
+                    Sensitivity = "medium"
+                }
+            ]
+        });
+
+        var poll = hub.PollEvents(new LocalContextPollRequest
+        {
+            ClientId = "test",
+            Scopes = ["context.medium:read"],
+            Since = observedAt.AddMinutes(-1)
+        });
+
+        var ev = Assert.Single(poll.Events);
+        Assert.False(ev.Payload.ContainsKey("title"));
+        Assert.Equal("Chrome", ev.Payload["source_app"]);
+        Assert.Equal("medium", ev.MaxFieldSensitivity);
+    }
+}

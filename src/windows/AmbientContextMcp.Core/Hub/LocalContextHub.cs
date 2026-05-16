@@ -83,6 +83,11 @@ public sealed class LocalContextHub
                 }
 
                 var sequence = ++_nextSequence;
+                var (payloadSensitivity, maxFieldSensitivity) = ComputePayloadSensitivity(
+                    outboundEvent.Name,
+                    outboundEvent.Payload,
+                    _privacyClassifications,
+                    outboundEvent.Sensitivity);
                 var localEvent = new LocalContextEvent
                 {
                     Id = CreateEventId(outboundEvent.ObservedAt, sequence),
@@ -91,7 +96,9 @@ public sealed class LocalContextHub
                     Name = outboundEvent.Name,
                     Value = outboundEvent.Value,
                     Payload = outboundEvent.Payload,
-                    Sensitivity = outboundEvent.Sensitivity
+                    Sensitivity = outboundEvent.Sensitivity,
+                    PayloadSensitivity = payloadSensitivity,
+                    MaxFieldSensitivity = maxFieldSensitivity
                 };
                 _events.Add(localEvent);
                 publishedEvents.Add(localEvent);
@@ -153,7 +160,9 @@ public sealed class LocalContextHub
                 .Where(item => !request.Since.HasValue || item.ObservedAt >= request.Since.Value)
                 .Where(item => !request.Until.HasValue || item.ObservedAt <= request.Until.Value)
                 .Where(item => IsNameIncluded(item.Name, request.Names))
-                .Where(item => IsSensitivityAllowed(item.Sensitivity, request.Scopes))
+                .Select(item => FilterEventForScope(item, request.Scopes))
+                .Where(item => item is not null)
+                .Select(item => item!)
                 .Take(limit + 1)
                 .ToList();
 
