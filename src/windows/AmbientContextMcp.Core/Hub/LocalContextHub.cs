@@ -609,6 +609,175 @@ public sealed class LocalContextHub
         };
     }
 
+    private static string LookupPayloadFieldSensitivity(
+        string eventName,
+        string payloadKey,
+        IReadOnlyList<PrivacyClassification> classifications,
+        string fallbackSensitivity)
+    {
+        var keyPath = $"events.{eventName}.{payloadKey}";
+
+        // 1. 完全一致を最優先 (例: events.media_session_changed.title)
+        foreach (var item in classifications)
+        {
+            if (item.Path.Equals(keyPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return NormalizeSensitivity(item.Sensitivity);
+            }
+        }
+
+        // 2. 親パスを最長一致で探す (例: events.media_session_changed)
+        PrivacyClassification? bestParent = null;
+        foreach (var item in classifications)
+        {
+            if (keyPath.StartsWith(item.Path + ".", StringComparison.OrdinalIgnoreCase) &&
+                (bestParent is null || item.Path.Length > bestParent.Path.Length))
+            {
+                bestParent = item;
+            }
+        }
+
+        if (bestParent is not null)
+        {
+            return NormalizeSensitivity(bestParent.Sensitivity);
+        }
+
+        // 3. event-level Sensitivity にフォールバック
+        return NormalizeSensitivity(fallbackSensitivity);
+    }
+
+    private static (IReadOnlyDictionary<string, string> PerKey, string Max) ComputePayloadSensitivity(
+        string eventName,
+        IReadOnlyDictionary<string, string> payload,
+        IReadOnlyList<PrivacyClassification> classifications,
+        string eventSensitivity)
+    {
+        var perKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var maxLevel = GetSensitivityLevel(eventSensitivity);
+
+        foreach (var key in payload.Keys)
+        {
+            var fieldSensitivity = LookupPayloadFieldSensitivity(eventName, key, classifications, eventSensitivity);
+            perKey[key] = fieldSensitivity;
+
+            var level = GetSensitivityLevel(fieldSensitivity);
+            if (level > maxLevel)
+            {
+                maxLevel = level;
+            }
+        }
+
+        return (perKey, LevelToSensitivity(maxLevel));
+    }
+
+    private static string LevelToSensitivity(int level)
+    {
+        return level switch
+        {
+            3 => "high",
+            2 => "medium",
+            _ => "low"
+        };
+    }
+
+    /// <summary>
+    /// scope フィルタを per-field 化したもの。
+    /// event-level Sensitivity が scope を超えたら null を返す (event ごと落とす)。
+    /// それ以外は payload を機微度別に間引いた新しい LocalContextEvent を返す。
+    /// PayloadSensitivity が空のとき (旧データ復元) は event-level Sensitivity にフォールバック。
+    /// </summary>
+    private static LocalContextEvent? FilterEventForScope(
+        LocalContextEvent ev,
+        IReadOnlyList<string> scopes)
+    {
+        var allowedLevel = GetAllowedLevel(scopes);
+
+        if (GetSensitivityLevel(ev.Sensitivity) > allowedLevel)
+        {
+            return null;
+        }
+
+        // payload キー単位フィルタが不要なら同一参照を返す (アロケーション抑制)
+        if (string.IsNullOrEmpty(ev.MaxFieldSensitivity) ||
+            GetSensitivityLevel(ev.MaxFieldSensitivity) <= allowedLevel)
+        {
+            return ev;
+        }
+
+        var filteredPayload = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var filteredSensitivity = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var maxLevel = GetSensitivityLevel(ev.Sensitivity);
+
+        foreach (var pair in ev.Payload)
+        {
+            var fieldSensitivity = ev.PayloadSensitivity.TryGetValue(pair.Key, out var s)
+                ? s
+                : ev.Sensitivity;
+            if (GetSensitivityLevel(fieldSensitivity) > allowedLevel)
+            {
+                continue;
+            }
+
+            filteredPayload[pair.Key] = pair.Value;
+            filteredSensitivity[pair.Key] = fieldSensitivity;
+            var level = GetSensitivityLevel(fieldSensitivity);
+            if (level > maxLevel)
+            {
+                maxLevel = level;
+            }
+        }
+
+        return new LocalContextEvent
+        {
+            Id = ev.Id,
+            Sequence = ev.Sequence,
+            ObservedAt = ev.ObservedAt,
+            Name = ev.Name,
+            Value = ev.Value,
+            Payload = filteredPayload,
+            Sensitivity = ev.Sensitivity,
+            PayloadSensitivity = filteredSensitivity,
+            MaxFieldSensitivity = LevelToSensitivity(maxLevel)
+        };
+    }
+
+    private static int GetAllowedLevel(IReadOnlyList<string> scopes)
+    {
+        if (scopes.Contains("context.high:read", StringComparer.OrdinalIgnoreCase) ||
+            scopes.Contains("context.all:read", StringComparer.OrdinalIgnoreCase))
+        {
+            return 3;
+        }
+
+        if (scopes.Contains("context.medium:read", StringComparer.OrdinalIgnoreCase))
+        {
+            return 2;
+        }
+
+        return 1;
+    }
+
+    // --- Test-only wrappers (tests live in a sister assembly without InternalsVisibleTo) ---
+
+    public static string LookupPayloadFieldSensitivityForTest(
+        string eventName,
+        string payloadKey,
+        IReadOnlyList<PrivacyClassification> classifications,
+        string fallbackSensitivity) =>
+        LookupPayloadFieldSensitivity(eventName, payloadKey, classifications, fallbackSensitivity);
+
+    public static (IReadOnlyDictionary<string, string> PerKey, string Max) ComputePayloadSensitivityForTest(
+        string eventName,
+        IReadOnlyDictionary<string, string> payload,
+        IReadOnlyList<PrivacyClassification> classifications,
+        string eventSensitivity) =>
+        ComputePayloadSensitivity(eventName, payload, classifications, eventSensitivity);
+
+    public static LocalContextEvent? FilterEventForScopeForTest(
+        LocalContextEvent ev,
+        IReadOnlyList<string> scopes) =>
+        FilterEventForScope(ev, scopes);
+
     private static string CreateEventId(DateTimeOffset observedAt, long sequence)
     {
         return $"evt_{observedAt.UtcDateTime:yyyyMMddHHmmssfff}_{sequence:D6}";
