@@ -9,6 +9,11 @@ namespace AmbientContextMcp.Core.Models;
 ///
 /// 説明文の言語は <see cref="CultureInfo.CurrentUICulture"/> 起動時の値で決まる。
 /// 日本語 OS なら日本語、それ以外は英語 (PrivacyClassifications と同方針)。
+///
+/// MAINTENANCE: payload キーは <c>WindowsAmbientContextService.Transitions.cs</c> と
+/// <c>WindowsAmbientContextService.cs</c> の <c>AddEvent</c> 呼び出し箇所と同期させること。
+/// emit 側でキーを追加・改名・削除したら、ここも更新する。drift を機械的に検出する手段はないので
+/// 注意。
 /// </summary>
 public static class EventSchemaCatalog
 {
@@ -126,19 +131,19 @@ public static class EventSchemaCatalog
             Schema("ac_power_connected", "low",
                 "AC 電源接続を検出。直前の power_source_changed と連動して発火する。",
                 "Fires when AC power becomes the source, paired with power_source_changed.",
-                Key("from", "low", "遷移前の電源種別。", "Previous power source.", "battery"),
+                Key("from", "low", "遷移前の電源種別 (初回観測時は \"unknown\")。", "Previous power source (\"unknown\" on first observation).", "battery"),
                 Key("to", "low", "\"ac\".", "\"ac\".", "ac")),
 
             Schema("battery_power_active", "low",
                 "バッテリー駆動への切替を検出。",
                 "Fires when battery becomes the active power source.",
-                Key("from", "low", "遷移前の電源種別。", "Previous power source.", "ac"),
+                Key("from", "low", "遷移前の電源種別 (初回観測時は \"unknown\")。", "Previous power source (\"unknown\" on first observation).", "ac"),
                 Key("to", "low", "\"battery\".", "\"battery\".", "battery")),
 
             Schema("short_term_power_active", "low",
                 "短期電源 (例: UPS) への切替を検出。",
                 "Fires when a short-term power source (e.g. UPS) becomes active.",
-                Key("from", "low", "遷移前の電源種別。", "Previous power source.", "ac"),
+                Key("from", "low", "遷移前の電源種別 (初回観測時は \"unknown\")。", "Previous power source (\"unknown\" on first observation).", "ac"),
                 Key("to", "low", "\"short_term\".", "\"short_term\".", "short_term")),
 
             Schema("power_setting_changed", "low",
