@@ -208,6 +208,14 @@ public sealed class LocalContextHub
         }
     }
 
+    public LocalContextEventSchemasResponse GetEventSchemas()
+    {
+        return new LocalContextEventSchemasResponse
+        {
+            Events = EventSchemaCatalog.GetAll()
+        };
+    }
+
     public LocalContextPolicyResponse GetPolicy()
     {
         lock (_lock)

@@ -1,6 +1,6 @@
 # MCP ツール契約
 
-Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを公開します。エンドポイントは既定で `http://127.0.0.1:37690/mcp`、Bearer トークン必須、Origin ヘッダーがある場合は `localhost` / `127.0.0.1` / `::1` のみ許可。
+Ambient Context MCP は Streamable HTTP MCP transport で 4 つのツールを公開します。エンドポイントは既定で `http://127.0.0.1:37690/mcp`、Bearer トークン必須、Origin ヘッダーがある場合は `localhost` / `127.0.0.1` / `::1` のみ許可。
 
 ## ツール一覧
 
@@ -48,6 +48,37 @@ Ambient Context MCP は Streamable HTTP MCP transport で 3 つのツールを�
   "outboundEventCandidateCount": 2,
   "retainedOutboundEventCount": 2,
   "retention": { "maxAgeHours": 24, "maxEvents": 500 }
+}
+```
+
+### `ambient_context_describe_events`
+
+サーバが発火しうる全イベントの payload スキーマカタログを返します。**実データは含まれません**。クライアントは「foreground_changed の payload には何が入るか」「media_session_changed の title は高機微か」を 1 回の呼び出しで把握できます。値はリリース間でしか変化しないので一度取得してキャッシュしてください。
+
+**Input** (オブジェクトなし、引数 0):
+
+```json
+{}
+```
+
+**Output**:
+
+```json
+{
+  "source": "eventSchemaCatalog",
+  "events": [
+    {
+      "name": "media_session_changed",
+      "sensitivity": "medium",
+      "description": "Windows SMTC のメディアセッション情報が変わった瞬間...",
+      "payloadKeys": [
+        { "key": "source_app", "sensitivity": "medium", "description": "再生元アプリの AppUserModelId。", "example": "Spotify.exe" },
+        { "key": "playback_status", "sensitivity": "medium", "description": "Playing / Paused / Stopped。", "example": "Playing" },
+        { "key": "title", "sensitivity": "high", "description": "曲名 / 動画タイトル。", "example": "Imagine" },
+        { "key": "artist", "sensitivity": "high", "description": "アーティスト / 出演者。", "example": "John Lennon" }
+      ]
+    }
+  ]
 }
 ```
 

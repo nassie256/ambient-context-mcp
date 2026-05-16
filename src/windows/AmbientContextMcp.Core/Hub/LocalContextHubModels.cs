@@ -162,3 +162,10 @@ public sealed class LocalContextRetentionInfo
 
     public int MaxEvents { get; init; } = 500;
 }
+
+public sealed class LocalContextEventSchemasResponse
+{
+    public string Source { get; init; } = "eventSchemaCatalog";
+
+    public IReadOnlyList<EventSchema> Events { get; init; } = [];
+}

@@ -18,6 +18,15 @@ public sealed class ContextTools
         return JsonSerializer.Serialize(response, AmbientContextJson.Options);
     }
 
+    [McpServerTool(Name = "ambient_context_describe_events", Title = "Describe Ambient Context Event Schemas", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Description("Returns the static event schema catalog: every event name the server can emit, its event-level sensitivity, a human description, and the list of payload keys with their per-key sensitivity and example values. Use this once to learn what to expect from ambient_context_poll_events instead of sniffing live samples. The catalog only changes between releases; cache the result.")]
+    public static string DescribeEvents(LocalContextHub hub)
+    {
+        ArgumentNullException.ThrowIfNull(hub);
+        var response = hub.GetEventSchemas();
+        return JsonSerializer.Serialize(response, AmbientContextJson.Options);
+    }
+
     [McpServerTool(Name = "ambient_context_get_states", Title = "Get Ambient Context States", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Returns the latest ambient context states. The response only includes items that satisfy BOTH (a) the user's transmission policy and (b) the client-supplied scope filter. The scope is the maximum sensitivity the client declares it can handle; raising it never bypasses the user's opt-in policy. The response includes a 'policyVersion' hash — clients can skip calling ambient_context_get_policy until that value changes. Use 'context.all:read' as a shorthand for 'I can handle anything the user permits'.")]
     public static string GetStates(
