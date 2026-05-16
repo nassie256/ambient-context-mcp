@@ -6,17 +6,29 @@ namespace AmbientContextMcp.Core.Tests;
 internal static class LocalContextHubTestFactory
 {
     public static LocalContextHub CreateInMemory() =>
-        new(new InMemorySettingsStore());
+        new(new InMemorySettingsStore(persistEventLog: false));
+
+    public static LocalContextHub CreateWithPersistentLog(string settingsPath) =>
+        new(new InMemorySettingsStore(persistEventLog: true, overrideSettingsPath: settingsPath));
 
     private sealed class InMemorySettingsStore : ISettingsStore
     {
-        public string SettingsPath { get; } =
-            Path.Combine(Path.GetTempPath(), "ambient-context-mcp-test", Guid.NewGuid() + ".json");
+        private readonly bool _persistEventLog;
+
+        public InMemorySettingsStore(bool persistEventLog, string? overrideSettingsPath = null)
+        {
+            _persistEventLog = persistEventLog;
+            SettingsPath = overrideSettingsPath ??
+                Path.Combine(Path.GetTempPath(), "ambient-context-mcp-test", Guid.NewGuid() + ".json");
+        }
+
+        public string SettingsPath { get; }
 
         public AmbientTransmissionSettings LoadAmbientTransmissionSettings() => new();
         public void SaveAmbientTransmissionSettings(AmbientTransmissionSettings settings) { }
 
-        public LocalContextSettings LoadLocalContextSettings() => new();
+        public LocalContextSettings LoadLocalContextSettings() =>
+            new() { PersistEventLog = _persistEventLog };
         public void SaveLocalContextSettings(LocalContextSettings settings) { }
 
         public McpServerSettings LoadMcpServerSettings() => new();

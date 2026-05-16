@@ -74,6 +74,12 @@ public sealed class LocalContextHub
             _policyVersion = ComputePolicyVersion(
                 _privacyClassifications,
                 _transmissionPolicy.PathTransmitOverrides);
+
+            // events.jsonl から復元した旧スキーマのイベントは PayloadSensitivity が空のまま
+            // _events に乗っているため、scope フィルタが event-level だけにフォールバックして
+            // 高機微 payload キーが意図せず流れ続ける。最初に classifications を持つ snapshot が
+            // 来たタイミングで一度だけ backfill する (以降は一致するエントリが無く no-op)。
+            var backfilled = BackfillLegacyPayloadSensitivity();
             _observedStateCount = snapshot.States.Count;
             _outboundStateCount = snapshot.OutboundStates.Count;
             _internalEventHistoryCount = snapshot.Events.Count;
@@ -113,9 +119,10 @@ public sealed class LocalContextHub
 
             if (_persistEventLog)
             {
-                if (trimmedAny)
+                if (trimmedAny || backfilled)
                 {
-                    // 古いイベントが落ちたので JSONL を _events から書き直す (compaction)。
+                    // 古いイベントが落ちたか、または旧スキーマの backfill が走ったので
+                    // JSONL を _events から書き直す (compaction)。
                     // 同一トランザクションの新規イベントもこの 1 回の書き出しに含まれる。
                     RewriteEventLogUnlocked();
                 }
@@ -317,6 +324,46 @@ public sealed class LocalContextHub
     /// 戻り値は「実際にイベントを 1 件以上落としたか」。永続化が ON の場合、
     /// 呼び出し側はこのフラグを見て events.jsonl を rewrite するか判定する。
     /// </summary>
+    /// <summary>
+    /// PayloadSensitivity / MaxFieldSensitivity が空のままの _events エントリを
+    /// 現在の _privacyClassifications から再計算して詰め直す。
+    /// アップグレード直後の events.jsonl 復元エントリ (= 旧スキーマ) を新フィルタが正しく
+    /// 間引けるようにする目的。返り値は実際に 1 件以上書き換えたかどうか。
+    /// </summary>
+    private bool BackfillLegacyPayloadSensitivity()
+    {
+        var backfilled = false;
+        for (var i = 0; i < _events.Count; i++)
+        {
+            var current = _events[i];
+            if (!string.IsNullOrEmpty(current.MaxFieldSensitivity))
+            {
+                continue;
+            }
+
+            var (perKey, max) = ComputePayloadSensitivity(
+                current.Name,
+                current.Payload,
+                _privacyClassifications,
+                current.Sensitivity);
+            _events[i] = new LocalContextEvent
+            {
+                Id = current.Id,
+                Sequence = current.Sequence,
+                ObservedAt = current.ObservedAt,
+                Name = current.Name,
+                Value = current.Value,
+                Payload = current.Payload,
+                Sensitivity = current.Sensitivity,
+                PayloadSensitivity = perKey,
+                MaxFieldSensitivity = max
+            };
+            backfilled = true;
+        }
+
+        return backfilled;
+    }
+
     private bool TrimEvents(DateTimeOffset now)
     {
         var trimmed = false;
