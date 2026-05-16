@@ -73,19 +73,12 @@ public static class EventSchemaCatalog
 
             // Foreground app
             Schema("foreground_changed", "medium",
-                "前景アプリが切り替わった瞬間。HigherLevelEventsBySuppressedEvent によって直近 2 秒以内の foreground_app_category_changed は同梱せず本イベントに集約される。",
-                "Fires when the foreground app switches. Suppresses any foreground_app_category_changed within a 2-second window.",
+                "前景アプリの process_name または category が直近 emit と変わった瞬間。category_changed フラグでカテゴリ遷移かどうかを区別できる (旧 foreground_app_category_changed はこのフラグに統合された)。",
+                "Fires when the foreground app's process_name or category differs from the last emit. The category_changed flag distinguishes a category transition (replaces the old foreground_app_category_changed event).",
                 Key("category", "medium", "新しいアプリのカテゴリ (空文字 = 該当データなし)。", "New app's category (empty string when no data).", "code"),
                 Key("app_name", "medium", "新しいアプリ名 (空文字 = 該当データなし)。", "New app's display name (empty string when no data).", "Visual Studio Code"),
-                Key("process_name", "medium", "新しい実行ファイル名。", "New app's executable name.", "Code.exe")),
-
-            Schema("foreground_app_category_changed", "medium",
-                "前景アプリのカテゴリが変わった瞬間。foreground_changed の派生で、2 秒以内に前景変更が発生していれば抑制される。",
-                "Fires when the foreground app's category changes. Suppressed if a foreground_changed fires within 2 seconds.",
-                Key("from", "medium", "遷移前のカテゴリ (空文字 = 該当データなし)。", "Previous category (empty string when no data).", "browse"),
-                Key("to", "medium", "遷移後のカテゴリ。", "New category.", "code"),
-                Key("app_name", "medium", "遷移後のアプリ名 (空文字 = 該当データなし)。", "New app's display name (empty string when no data).", "Visual Studio Code"),
-                Key("process_name", "medium", "遷移後の実行ファイル名。", "New app's executable name.", "Code.exe")),
+                Key("process_name", "medium", "新しい実行ファイル名。", "New app's executable name.", "Code.exe"),
+                Key("category_changed", "medium", "直近 emit のカテゴリと比較して \"true\" / \"false\"。アプリは変わったがカテゴリは同じ場合は \"false\"。", "\"true\" / \"false\" relative to the last emit's category. \"false\" when the app changed but stayed within the same category.", "true")),
 
             // Battery
             Schema("battery_medium", "low",

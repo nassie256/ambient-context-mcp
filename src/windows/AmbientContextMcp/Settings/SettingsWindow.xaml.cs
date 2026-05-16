@@ -292,7 +292,9 @@ public partial class SettingsWindow : Window
             Option("foregroundApp.processName", Strings.TxOptForegroundProcessName, "medium"),
             Option("foregroundApp.titleSummary", Strings.TxOptForegroundTitleSummary, "medium"),
             Option("foregroundApp.rawWindowTitle", Strings.TxOptForegroundRawWindowTitle, "high"),
-            Option("events.foreground_app_category_changed", Strings.TxOptEventForegroundCategoryChanged, "medium"),
+            // events.foreground_app_category_changed は廃止済み (foreground_changed の category_changed フラグに統合)。
+            // UI から外し、ユーザーが新規に opt-in できないようにする。既存 override は classification 経由で残り、
+            // 発火しなくなった event に対しても無害。
             Option("events.foreground_changed", Strings.TxOptEventForegroundChanged, "medium"),
             Option("activity.contextSwitchesPerMin", Strings.TxOptActivityContextSwitches, "medium"),
             Option("events.context_switch_burst", Strings.TxOptEventContextSwitchBurst, "medium"),

@@ -10,10 +10,8 @@ public sealed partial class WindowsAmbientContextService
     private static readonly IReadOnlyDictionary<string, string[]> HigherLevelEventsBySuppressedEvent =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            ["foreground_changed"] =
-            [
-                "foreground_app_category_changed"
-            ],
+            // foreground_app_category_changed は廃止済み (foreground_changed の category_changed フラグに統合)。
+            // 抑止対象が無くなったため foreground_changed エントリも削除。
             ["presence_bucket_changed"] =
             [
                 "user_returned",
@@ -236,9 +234,12 @@ public sealed partial class WindowsAmbientContextService
             Privacy("foregroundApp.titleSummary", "medium", false,
                 "生タイトルより低機微だが、既知サイト名や拡張子から作業内容を推測できる。",
                 "Less sensitive than the raw title, but known site names or file extensions can still hint at activity."),
+            // 廃止済み: foreground_changed の payload.category_changed フラグに統合された。
+            // 旧クライアントの override が残っているケースに備えて classification 自体は残し、
+            // この event が発火しないことだけを Reason に明記する。
             Privacy("events.foreground_app_category_changed", "medium", false,
-                "作業カテゴリの遷移。便利だが行動履歴になりうる。",
-                "Task category transitions. Useful, but can accumulate into an activity log."),
+                "[廃止] foreground_changed の category_changed フラグに統合されました。このイベントは発火しません。現役イベントの一覧は ambient_context_describe_events を参照。",
+                "[Deprecated] Merged into foreground_changed's category_changed flag. This event no longer fires. See ambient_context_describe_events for the active event list."),
             Privacy("activity.contextSwitchesPerMin", "medium", false,
                 "アプリ切替頻度から作業リズムを推測できるためOpt-in向き。",
                 "App switch frequency reveals work rhythm; opt-in only."),
