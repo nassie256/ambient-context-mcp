@@ -149,7 +149,9 @@ public sealed class LocalContextHub
     {
         lock (_lock)
         {
-            TrimEvents(DateTimeOffset.Now);
+            var now = DateTimeOffset.Now;
+            TrimEvents(now);
+            _cursorTracker.PruneStale(now);
 
             var limit = NormalizeLimit(request.Limit);
             var isHistoryQuery = request.Since.HasValue || request.Until.HasValue;
@@ -158,7 +160,8 @@ public sealed class LocalContextHub
                 request.Cursor,
                 isHistoryQuery,
                 FirstSequence(),
-                LatestSequence());
+                LatestSequence(),
+                now);
 
             var matchingEvents = _events
                 .Where(item => item.Sequence > cursorResult.Sequence)
@@ -181,7 +184,7 @@ public sealed class LocalContextHub
             // pagination は呼び出し側が NextCursor を渡すことで行う。
             if (!isHistoryQuery)
             {
-                _cursorTracker.Advance(request.ClientId, lastSequence);
+                _cursorTracker.Advance(request.ClientId, lastSequence, now);
             }
 
             return new LocalContextPollResponse

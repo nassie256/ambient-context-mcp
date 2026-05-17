@@ -218,44 +218,45 @@ public static partial class AmbientContextCatalog
         ];
     }
 
+    // 送信設定 UI に出す path 一覧。GetPrivacyClassifications() のサブセット。
+    // 順序は UI 表示順 (= ダイアログのリスト順) として意味があるので維持する。
+    private static readonly string[] TransmissionOptionPaths =
+    [
+        "foregroundApp.category",
+        "foregroundApp.appName",
+        "foregroundApp.processName",
+        "foregroundApp.titleSummary",
+        "foregroundApp.rawWindowTitle",
+        "events.foreground_changed",
+        "activity.contextSwitchesPerMin",
+        "events.context_switch_burst",
+        "media.isAvailable",
+        "media.playbackStatus",
+        "media.sourceAppUserModelId",
+        "media.title",
+        "media.artist",
+        "media.albumTitle",
+        "events.media_playback_started",
+        "events.media_playback_paused",
+        "events.media_session_changed",
+        "events.media_session_changed.title",
+        "events.media_session_changed.artist",
+        "system.timeZoneId",
+        "display.count",
+        "displays"
+    ];
+
     public static IReadOnlyList<TransmissionOptionDefinition> GetTransmissionOptions()
     {
-        return
-        [
-            Option("foregroundApp.category"),
-            Option("foregroundApp.appName"),
-            Option("foregroundApp.processName"),
-            Option("foregroundApp.titleSummary"),
-            Option("foregroundApp.rawWindowTitle"),
-            Option("events.foreground_changed"),
-            Option("activity.contextSwitchesPerMin"),
-            Option("events.context_switch_burst"),
-            Option("media.isAvailable"),
-            Option("media.playbackStatus"),
-            Option("media.sourceAppUserModelId"),
-            Option("media.title"),
-            Option("media.artist"),
-            Option("media.albumTitle"),
-            Option("events.media_playback_started"),
-            Option("events.media_playback_paused"),
-            Option("events.media_session_changed"),
-            Option("events.media_session_changed.title"),
-            Option("events.media_session_changed.artist"),
-            Option("system.timeZoneId"),
-            Option("display.count"),
-            Option("displays")
-        ];
-    }
-
-    private static TransmissionOptionDefinition Option(string path)
-    {
-        var classification = GetPrivacyClassifications()
-            .Single(item => item.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-        return new TransmissionOptionDefinition
-        {
-            Path = classification.Path,
-            Sensitivity = classification.Sensitivity
-        };
+        var classifications = GetPrivacyClassifications()
+            .ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
+        return TransmissionOptionPaths
+            .Select(path => new TransmissionOptionDefinition
+            {
+                Path = classifications[path].Path,
+                Sensitivity = classifications[path].Sensitivity
+            })
+            .ToList();
     }
 
     private static PrivacyClassification Privacy(
