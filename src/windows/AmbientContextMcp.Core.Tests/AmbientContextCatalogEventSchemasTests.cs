@@ -4,12 +4,12 @@ using Xunit;
 
 namespace AmbientContextMcp.Core.Tests;
 
-public class EventSchemaCatalogTests
+public class AmbientContextCatalogEventSchemasTests
 {
     [Fact]
     public void Catalog_contains_core_event_names()
     {
-        var all = EventSchemaCatalog.GetAll();
+        var all = AmbientContextCatalog.GetEventSchemas();
         var names = all.Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         Assert.Contains("foreground_changed", names);
@@ -23,7 +23,7 @@ public class EventSchemaCatalogTests
     [Fact]
     public void Schema_names_are_unique()
     {
-        var all = EventSchemaCatalog.GetAll();
+        var all = AmbientContextCatalog.GetEventSchemas();
         var names = all.Select(s => s.Name).ToList();
         var distinct = names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
@@ -33,7 +33,7 @@ public class EventSchemaCatalogTests
     [Fact]
     public void Media_session_changed_marks_title_and_artist_as_high()
     {
-        var schema = EventSchemaCatalog.GetAll()
+        var schema = AmbientContextCatalog.GetEventSchemas()
             .Single(s => s.Name == "media_session_changed");
 
         Assert.Equal("medium", schema.Sensitivity);
@@ -47,7 +47,7 @@ public class EventSchemaCatalogTests
     [Fact]
     public void Every_schema_has_non_empty_description()
     {
-        var all = EventSchemaCatalog.GetAll();
+        var all = AmbientContextCatalog.GetEventSchemas();
 
         foreach (var schema in all)
         {
@@ -59,7 +59,7 @@ public class EventSchemaCatalogTests
     [Fact]
     public void Every_payload_key_has_non_empty_description()
     {
-        var all = EventSchemaCatalog.GetAll();
+        var all = AmbientContextCatalog.GetEventSchemas();
 
         foreach (var schema in all)
         {
@@ -89,7 +89,7 @@ public class EventSchemaCatalogTests
             .Select(item => item.Path)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var schema in EventSchemaCatalog.GetAll())
+        foreach (var schema in AmbientContextCatalog.GetEventSchemas())
         {
             Assert.Contains("events." + schema.Name, classifications);
         }

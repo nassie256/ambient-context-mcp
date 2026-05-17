@@ -283,10 +283,6 @@ public sealed class LocalContextHub
     }
 
     /// <summary>
-    /// 戻り値は「実際にイベントを 1 件以上落としたか」。永続化が ON の場合、
-    /// 呼び出し側はこのフラグを見て events.jsonl を rewrite するか判定する。
-    /// </summary>
-    /// <summary>
     /// PayloadSensitivity / MaxFieldSensitivity が空のままの _events エントリを
     /// 現在の _privacyClassifications から再計算して詰め直す。
     /// アップグレード直後の events.jsonl 復元エントリ (= 旧スキーマ) を新フィルタが正しく
@@ -326,6 +322,10 @@ public sealed class LocalContextHub
         return backfilled;
     }
 
+    /// <summary>
+    /// 戻り値は「実際にイベントを 1 件以上落としたか」。永続化が ON の場合、
+    /// 呼び出し側はこのフラグを見て events.jsonl を rewrite するか判定する。
+    /// </summary>
     private bool TrimEvents(DateTimeOffset now)
     {
         var trimmed = false;

@@ -9,8 +9,6 @@ public static class AmbientContextProjector
     private static readonly IReadOnlyDictionary<string, string[]> HigherLevelEventsBySuppressedEvent =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            // foreground_app_category_changed は廃止済み (foreground_changed の category_changed フラグに統合)。
-            // 抑止対象が無くなったため foreground_changed エントリも削除。
             ["presence_bucket_changed"] =
             [
                 "user_returned",
