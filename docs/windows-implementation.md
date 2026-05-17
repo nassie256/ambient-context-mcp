@@ -36,4 +36,4 @@
 
 - **マルチユーザー / RDP**: `WTSRegisterSessionNotification(NotifyForThisSession)` を使っているため、当該セッションのロック/アンロックのみ検知。リモートデスクトップ越しでも該当セッションのイベントは届く想定
 - **DPI**: 設定ダイアログは Per-Monitor V2 を `ApplicationConfiguration.Initialize()` 経由で取得
-- **Windows 10 1903 (10.0.18362) 未満**: WinRT MediaControl の TFM が `net8.0-windows10.0.19041.0` のため非対応
+- **Windows 10 version 2004 (10.0.19041) 未満**: WinRT MediaControl の TFM が `net8.0-windows10.0.19041.0` のため非対応

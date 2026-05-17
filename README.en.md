@@ -69,7 +69,7 @@ claude mcp add ambient-context \
 
 ## Requirements
 
-- Windows 10 1903 (10.0.18362) or later
+- Windows 10 version 2004 (10.0.19041, May 2020 Update) or later
 - .NET 8 Desktop Runtime x64 (only for framework-dependent builds)
 
 ## Build

@@ -66,7 +66,7 @@ claude mcp add ambient-context \
 
 ## 必要環境
 
-- Windows 10 1903 (10.0.18362) 以降
+- Windows 10 version 2004 (10.0.19041, May 2020 Update) 以降
 - .NET 8 Desktop Runtime x64 (framework-dependent 配布版の場合)
 
 ## ビルド
