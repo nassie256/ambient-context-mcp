@@ -86,6 +86,16 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         Save(current => current.Ui = settings);
     }
 
+    public TransientStateSettings LoadTransientStateSettings()
+    {
+        return Load().TransientState ?? new TransientStateSettings();
+    }
+
+    public void SaveTransientStateSettings(TransientStateSettings settings)
+    {
+        Save(current => current.TransientState = settings);
+    }
+
     public static string GetDefaultPath()
     {
         return Path.Combine(
@@ -111,7 +121,9 @@ public sealed class JsonFileSettingsStore : ISettingsStore
             settings.SchemaVersion = 1;
 
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(settings, AmbientContextJson.Options));
+            var tempPath = _path + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(settings, AmbientContextJson.Options));
+            File.Move(tempPath, _path, overwrite: true);
         }
     }
 
@@ -157,5 +169,7 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         public SettingsWindowStatus? SettingsWindow { get; set; }
 
         public UiSettings? Ui { get; set; }
+
+        public TransientStateSettings? TransientState { get; set; }
     }
 }

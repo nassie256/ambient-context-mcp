@@ -23,4 +23,8 @@ public interface ISettingsStore
     UiSettings LoadUiSettings();
 
     void SaveUiSettings(UiSettings settings);
+
+    TransientStateSettings LoadTransientStateSettings();
+
+    void SaveTransientStateSettings(TransientStateSettings settings);
 }

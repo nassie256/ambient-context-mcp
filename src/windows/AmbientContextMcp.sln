@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp", "Ambien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp.StdioBridge", "AmbientContextMcp.StdioBridge\AmbientContextMcp.StdioBridge.csproj", "{7AE8B26D-9763-40A5-B442-60761AE60565}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AmbientContextMcp.Core.Tests", "AmbientContextMcp.Core.Tests\AmbientContextMcp.Core.Tests.csproj", "{BA848F31-15A5-4B45-AF8D-9386E591D1B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{7AE8B26D-9763-40A5-B442-60761AE60565}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AE8B26D-9763-40A5-B442-60761AE60565}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AE8B26D-9763-40A5-B442-60761AE60565}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA848F31-15A5-4B45-AF8D-9386E591D1B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA848F31-15A5-4B45-AF8D-9386E591D1B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA848F31-15A5-4B45-AF8D-9386E591D1B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA848F31-15A5-4B45-AF8D-9386E591D1B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

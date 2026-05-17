@@ -113,7 +113,9 @@ public static class AmbientTier1Rules
     {
         if (string.IsNullOrWhiteSpace(executableName))
         {
-            return ("unknown", "unknown");
+            // 「該当データなし」は AppName / Category 共に "" で統一する。"unknown" 文字列はサニチネル
+            // として使わない (集計時に "" / 欠落 / "unknown" の 3 系統が混在してバグの温床になるため)。
+            return ("", "");
         }
 
         return AppClassifications.TryGetValue(executableName, out var app)

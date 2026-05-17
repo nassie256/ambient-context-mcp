@@ -1,12 +1,10 @@
 using System.ComponentModel;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using AmbientContextMcp.AmbientContext;
 using ComboBox = System.Windows.Controls.ComboBox;
 using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
-using Clipboard = System.Windows.Clipboard;
 using AmbientContextMcp.Autostart;
 using AmbientContextMcp.Core.Hub;
 using AmbientContextMcp.Core.Policy;
@@ -18,8 +16,6 @@ namespace AmbientContextMcp.Settings;
 
 public partial class SettingsWindow : Window
 {
-    private const double MinVisibleDip = 32.0;
-
     private readonly ISettingsStore _settingsStore;
     private readonly McpServerHost _mcpHost;
     private readonly LocalContextHub _hub;
@@ -40,7 +36,7 @@ public partial class SettingsWindow : Window
         _hub = hub;
         _collector = collector;
         _autostart = autostart;
-        _transmissionOptions = CreateTransmissionOptions();
+        _transmissionOptions = TransmissionOptionViewModel.CreateAll();
         TransmissionOptionsList.ItemsSource = _transmissionOptions;
 
         LoadTransmissionSettings();
@@ -52,14 +48,14 @@ public partial class SettingsWindow : Window
         McpPortBox.Text = _mcpHost.Settings.Port.ToString(CultureInfo.InvariantCulture);
         RefreshMcpStatus();
 
-        SourceInitialized += (_, _) => RestoreWindowStatus();
+        SourceInitialized += (_, _) => SettingsWindowPlacement.Restore(this, _settingsStore);
     }
 
     private string _initialLanguage = "";
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        SaveWindowStatus();
+        SettingsWindowPlacement.Save(this, _settingsStore);
         base.OnClosing(e);
     }
 
@@ -103,21 +99,17 @@ public partial class SettingsWindow : Window
 
     private void OnCopyEndpointClick(object sender, RoutedEventArgs e)
     {
-        SafeCopy(McpEndpointBox.Text);
+        ClipboardHelper.SafeCopy(McpEndpointBox.Text);
     }
 
     private void OnCopyTokenClick(object sender, RoutedEventArgs e)
     {
-        SafeCopy(McpTokenBox.Text);
+        ClipboardHelper.SafeCopy(McpTokenBox.Text);
     }
 
     private void OnCopyClaudeCodeSnippetClick(object sender, RoutedEventArgs e)
     {
-        var snippet =
-            $"claude mcp add ambient-context " +
-            $"--transport http {_mcpHost.McpUrl} " +
-            $"--header \"Authorization: Bearer {_mcpHost.Token}\"";
-        SafeCopy(snippet);
+        ClipboardHelper.SafeCopy(McpClientSnippets.BuildClaudeCodeSnippet(_mcpHost.McpUrl, _mcpHost.Token));
         SettingsStatusText.Text = Strings.StatusClaudeCodeCopied;
     }
 
@@ -283,175 +275,4 @@ public partial class SettingsWindow : Window
         return fallback;
     }
 
-    private static List<TransmissionOptionViewModel> CreateTransmissionOptions()
-    {
-        return
-        [
-            Option("foregroundApp.category", Strings.TxOptForegroundCategory, "medium"),
-            Option("foregroundApp.appName", Strings.TxOptForegroundAppName, "medium"),
-            Option("foregroundApp.processName", Strings.TxOptForegroundProcessName, "medium"),
-            Option("foregroundApp.titleSummary", Strings.TxOptForegroundTitleSummary, "medium"),
-            Option("foregroundApp.rawWindowTitle", Strings.TxOptForegroundRawWindowTitle, "high"),
-            Option("events.foreground_app_category_changed", Strings.TxOptEventForegroundCategoryChanged, "medium"),
-            Option("events.foreground_changed", Strings.TxOptEventForegroundChanged, "medium"),
-            Option("activity.contextSwitchesPerMin", Strings.TxOptActivityContextSwitches, "medium"),
-            Option("events.context_switch_burst", Strings.TxOptEventContextSwitchBurst, "medium"),
-            Option("media.isAvailable", Strings.TxOptMediaIsAvailable, "medium"),
-            Option("media.playbackStatus", Strings.TxOptMediaPlaybackStatus, "medium"),
-            Option("media.sourceAppUserModelId", Strings.TxOptMediaSourceApp, "medium"),
-            Option("media.title", Strings.TxOptMediaTitle, "high"),
-            Option("media.artist", Strings.TxOptMediaArtist, "high"),
-            Option("media.albumTitle", Strings.TxOptMediaAlbumTitle, "high"),
-            Option("events.media_playback_started", Strings.TxOptEventMediaPlaybackStarted, "medium"),
-            Option("events.media_playback_paused", Strings.TxOptEventMediaPlaybackPaused, "medium"),
-            Option("events.media_session_changed", Strings.TxOptEventMediaSessionChanged, "medium"),
-            Option("events.media_session_changed.title", Strings.TxOptEventMediaSessionChangedTitle, "high"),
-            Option("events.media_session_changed.artist", Strings.TxOptEventMediaSessionChangedArtist, "high"),
-            Option("system.timeZoneId", Strings.TxOptSystemTimeZone, "medium"),
-            Option("display.count", Strings.TxOptDisplayCount, "medium"),
-            Option("displays", Strings.TxOptDisplays, "medium")
-        ];
-    }
-
-    private static TransmissionOptionViewModel Option(string path, string label, string sensitivity)
-    {
-        return new TransmissionOptionViewModel
-        {
-            Path = path,
-            Label = label,
-            Sensitivity = sensitivity
-        };
-    }
-
-    private void RestoreWindowStatus()
-    {
-        try
-        {
-            var status = _settingsStore.LoadSettingsWindowStatus();
-            if (status is null)
-            {
-                return;
-            }
-
-            Width = Math.Max(MinWidth, status.Width);
-            Height = Math.Max(MinHeight, status.Height);
-
-            if (IsFinite(status.Left) && IsFinite(status.Top))
-            {
-                WindowStartupLocation = WindowStartupLocation.Manual;
-                Left = status.Left;
-                Top = status.Top;
-                KeepWindowOnScreen();
-            }
-        }
-        catch
-        {
-            // Ignore invalid placement files.
-        }
-    }
-
-    private void SaveWindowStatus()
-    {
-        if (WindowState == WindowState.Minimized)
-        {
-            return;
-        }
-
-        try
-        {
-            _settingsStore.SaveSettingsWindowStatus(new SettingsWindowStatus
-            {
-                SchemaVersion = 1,
-                Left = RestoreBounds.Left,
-                Top = RestoreBounds.Top,
-                Width = RestoreBounds.Width,
-                Height = RestoreBounds.Height
-            });
-        }
-        catch
-        {
-            // Window placement persistence is best effort.
-        }
-    }
-
-    private void KeepWindowOnScreen()
-    {
-        var virtualLeft = SystemParameters.VirtualScreenLeft;
-        var virtualTop = SystemParameters.VirtualScreenTop;
-        var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
-        var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
-
-        if (Left + Width < virtualLeft)
-        {
-            Left = virtualLeft;
-        }
-        else if (Left > virtualRight - MinVisibleDip)
-        {
-            Left = virtualRight - Math.Min(Width, SystemParameters.VirtualScreenWidth);
-        }
-
-        if (Top + Height < virtualTop)
-        {
-            Top = virtualTop;
-        }
-        else if (Top > virtualBottom - MinVisibleDip)
-        {
-            Top = virtualBottom - Math.Min(Height, SystemParameters.VirtualScreenHeight);
-        }
-    }
-
-    private static bool IsFinite(double value)
-    {
-        return !double.IsNaN(value) && !double.IsInfinity(value);
-    }
-
-    private static void SafeCopy(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        try
-        {
-            Clipboard.SetText(value);
-        }
-        catch
-        {
-            // Best effort.
-        }
-    }
-
-    private sealed class TransmissionOptionViewModel : INotifyPropertyChanged
-    {
-        private bool _isAllowed;
-
-        public string Path { get; init; } = "";
-
-        public string Label { get; init; } = "";
-
-        public string Sensitivity { get; init; } = "medium";
-
-        public bool IsAllowed
-        {
-            get => _isAllowed;
-            set
-            {
-                if (_isAllowed == value)
-                {
-                    return;
-                }
-
-                _isAllowed = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
 }

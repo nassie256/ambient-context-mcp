@@ -62,7 +62,7 @@ public sealed class ForegroundAppContext
 
     public string AppName { get; init; } = "";
 
-    public string Category { get; init; } = "unknown";
+    public string Category { get; init; } = "";
 
     public bool HasWindowTitle { get; init; }
 

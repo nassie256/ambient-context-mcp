@@ -1,4 +1,5 @@
 using AmbientContextMcp.Core.Models;
+using AmbientContextMcp.Core.Settings;
 
 namespace AmbientContextMcp.AmbientContext;
 
@@ -34,27 +35,41 @@ public sealed partial class WindowsAmbientContextService
         _lastPresenceBucket = presence.Bucket;
     }
 
+    /// <summary>
+    /// 前景アプリの状態遷移を検出し、変化していれば <c>foreground_changed</c> を発火する唯一の emit 点。
+    /// process_name または category が直近 emit と異なるときに発火し、ペイロードに
+    /// <c>category_changed</c> フラグ ("true" / "false") を含める。
+    /// 旧 <c>foreground_app_category_changed</c> はこのフラグに統合され、別イベントとしては発火しない。
+    /// </summary>
     private void EvaluateForegroundTransitions(ForegroundAppContext foreground)
     {
-        if (string.IsNullOrWhiteSpace(_lastForegroundCategory))
+        // Category="" / ProcessName="" は「該当データなし」の正規値なので、
+        // 初期化フラグで「まだ何も emit していない」状態と通常遷移を分ける。
+        if (!_foregroundCategoryInitialized)
         {
             _lastForegroundCategory = foreground.Category;
+            _lastForegroundProcessName = foreground.ProcessName;
+            _foregroundCategoryInitialized = true;
             return;
         }
 
-        if (foreground.Category.Equals(_lastForegroundCategory, StringComparison.OrdinalIgnoreCase))
+        var processChanged = !foreground.ProcessName.Equals(_lastForegroundProcessName, StringComparison.OrdinalIgnoreCase);
+        var categoryChanged = !foreground.Category.Equals(_lastForegroundCategory, StringComparison.OrdinalIgnoreCase);
+        if (!processChanged && !categoryChanged)
         {
             return;
         }
 
-        // foreground_changed は HigherLevelEventsBySuppressedEvent (Projection.cs:13-16) によって
-        // この event 発火時に outbound から落とされるため、後から「何のアプリだったか」を辿れるよう
-        // app_name / process_name もここに載せる (media_session_changed と同設計)。
-        var data = TransitionData(_lastForegroundCategory, foreground.Category);
-        data["app_name"] = foreground.AppName;
-        data["process_name"] = foreground.ProcessName;
-        AddEvent("foreground_app_category_changed", data, "medium");
+        AddEvent("foreground_changed", new Dictionary<string, string>
+        {
+            ["category"] = foreground.Category,
+            ["app_name"] = foreground.AppName,
+            ["process_name"] = foreground.ProcessName,
+            ["category_changed"] = categoryChanged ? "true" : "false"
+        }, "medium");
+
         _lastForegroundCategory = foreground.Category;
+        _lastForegroundProcessName = foreground.ProcessName;
     }
 
     private void EvaluateBatteryTransitions(AmbientContextSnapshot snapshot)
@@ -158,6 +173,7 @@ public sealed partial class WindowsAmbientContextService
             AddEvent("media_session_changed", new Dictionary<string, string>
             {
                 ["source_app"] = media.SourceAppUserModelId,
+                ["source_kind"] = MediaSourceKindClassifier.Classify(media.SourceAppUserModelId),
                 ["playback_status"] = media.PlaybackStatus,
                 ["title"] = media.Title,
                 ["artist"] = media.Artist
@@ -242,6 +258,7 @@ public sealed partial class WindowsAmbientContextService
         if (!IsBreakPresence(presence.Bucket) && _lastActivityDate != DateOnly.FromDateTime(observedAt.DateTime))
         {
             _lastActivityDate = DateOnly.FromDateTime(observedAt.DateTime);
+            PersistLastActivityDate(_lastActivityDate.Value);
             AddEvent("first_activity_today");
         }
 
@@ -256,6 +273,26 @@ public sealed partial class WindowsAmbientContextService
         else if (wellness.ContinuousActiveMinutes < LongSessionWarningMinutes)
         {
             _longSessionWarningActive = false;
+        }
+    }
+
+    /// <summary>
+    /// first_activity_today を発火したローカル日を永続化する。プロセス再起動を跨いで
+    /// 同日中の再発火を抑止する。永続化に失敗してもイベント発火自体は止めない (best-effort)。
+    /// </summary>
+    private void PersistLastActivityDate(DateOnly date)
+    {
+        try
+        {
+            _settingsStore.SaveTransientStateSettings(new TransientStateSettings
+            {
+                SchemaVersion = 1,
+                LastActivityDate = date
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist LastActivityDate; first_activity_today may re-fire on next restart.");
         }
     }
 
@@ -282,10 +319,12 @@ public sealed partial class WindowsAmbientContextService
 
     private static Dictionary<string, string> TransitionData(string previous, string current)
     {
+        // 「該当データなし」は空文字でそのまま返す。集計時に "" / 欠落 / "unknown" の 3 系統が
+        // 混在しないようにする方針 (AmbientTier1Rules.ClassifyApp と同じ整合)。
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["from"] = string.IsNullOrWhiteSpace(previous) ? "unknown" : previous,
-            ["to"] = string.IsNullOrWhiteSpace(current) ? "unknown" : current
+            ["from"] = previous,
+            ["to"] = current
         };
     }
 

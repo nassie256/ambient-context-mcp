@@ -195,10 +195,6 @@ public static class Strings
         "ウィンドウタイトル原文",
         "Raw window title");
 
-    public static string TxOptEventForegroundCategoryChanged { get; } = T(
-        "作業カテゴリの遷移イベント",
-        "Work category transition event");
-
     public static string TxOptEventForegroundChanged { get; } = T(
         "フォアグラウンド切替イベント (アプリ名・プロセス名込み)",
         "Foreground switch event (includes app and process name)");

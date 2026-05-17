@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text;
-using System.Text.Json;
 using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Settings;
 
@@ -17,21 +14,12 @@ public sealed class LocalContextHub
     private const int DefaultPollLimit = 50;
     private const int MaxPollLimit = 1000;
 
-    // JSONL は 1 行 1 イベントで grep / tail しやすくするため WriteIndented = false で書き出す。
-    // AmbientContextJson.Options は WriteIndented = true なので転用しない。
-    private static readonly JsonSerializerOptions JsonlOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
-
     private readonly object _lock = new();
     private readonly List<LocalContextEvent> _events = [];
     private readonly HashSet<string> _eventFingerprints = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, long> _clientPositions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LocalContextCursorTracker _cursorTracker = new();
     private readonly ISettingsStore _settingsStore;
-    private readonly string _eventLogPath;
+    private readonly LocalContextEventLog _eventLog;
 
     private IReadOnlyList<AmbientState> _latestStates = [];
     private IReadOnlyList<PrivacyClassification> _privacyClassifications = [];
@@ -45,13 +33,14 @@ public sealed class LocalContextHub
     private int _maxEventCount = DefaultMaxEventCount;
     private bool _persistEventLog;
     private long _nextSequence;
+    private string _policyVersion = "";
 
     public event EventHandler<LocalContextEvent>? EventPublished;
 
     public LocalContextHub(ISettingsStore settingsStore)
     {
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
-        _eventLogPath = ResolveEventLogPath(_settingsStore.SettingsPath);
+        _eventLog = new LocalContextEventLog(LocalContextEventLog.ResolvePath(_settingsStore.SettingsPath));
         ApplySettings(initialLoad: true);
         if (_persistEventLog)
         {
@@ -69,6 +58,15 @@ public sealed class LocalContextHub
             _latestStates = snapshot.OutboundStates.ToList();
             _privacyClassifications = snapshot.PrivacyClassifications.ToList();
             _transmissionPolicy = snapshot.TransmissionPolicy;
+            _policyVersion = PolicyVersionService.ComputePolicyVersion(
+                _privacyClassifications,
+                _transmissionPolicy.PathTransmitOverrides);
+
+            // events.jsonl から復元した旧スキーマのイベントは PayloadSensitivity が空のまま
+            // _events に乗っているため、scope フィルタが event-level だけにフォールバックして
+            // 高機微 payload キーが意図せず流れ続ける。最初に classifications を持つ snapshot が
+            // 来たタイミングで一度だけ backfill する (以降は一致するエントリが無く no-op)。
+            var backfilled = BackfillLegacyPayloadSensitivity();
             _observedStateCount = snapshot.States.Count;
             _outboundStateCount = snapshot.OutboundStates.Count;
             _internalEventHistoryCount = snapshot.Events.Count;
@@ -83,6 +81,11 @@ public sealed class LocalContextHub
                 }
 
                 var sequence = ++_nextSequence;
+                var (payloadSensitivity, maxFieldSensitivity) = SensitivityScopeFilter.ComputePayloadSensitivity(
+                    outboundEvent.Name,
+                    outboundEvent.Payload,
+                    _privacyClassifications,
+                    outboundEvent.Sensitivity);
                 var localEvent = new LocalContextEvent
                 {
                     Id = CreateEventId(outboundEvent.ObservedAt, sequence),
@@ -91,7 +94,9 @@ public sealed class LocalContextHub
                     Name = outboundEvent.Name,
                     Value = outboundEvent.Value,
                     Payload = outboundEvent.Payload,
-                    Sensitivity = outboundEvent.Sensitivity
+                    Sensitivity = outboundEvent.Sensitivity,
+                    PayloadSensitivity = payloadSensitivity,
+                    MaxFieldSensitivity = maxFieldSensitivity
                 };
                 _events.Add(localEvent);
                 publishedEvents.Add(localEvent);
@@ -101,9 +106,10 @@ public sealed class LocalContextHub
 
             if (_persistEventLog)
             {
-                if (trimmedAny)
+                if (trimmedAny || backfilled)
                 {
-                    // 古いイベントが落ちたので JSONL を _events から書き直す (compaction)。
+                    // 古いイベントが落ちたか、または旧スキーマの backfill が走ったので
+                    // JSONL を _events から書き直す (compaction)。
                     // 同一トランザクションの新規イベントもこの 1 回の書き出しに含まれる。
                     RewriteEventLogUnlocked();
                 }
@@ -126,13 +132,15 @@ public sealed class LocalContextHub
         {
             var states = _latestStates
                 .Where(state => IsNameIncluded(state.Name, request.Names))
-                .Where(state => IsSensitivityAllowed(state.Sensitivity, request.Scopes))
+                .Where(state => SensitivityScopeFilter.IsSensitivityAllowed(state.Sensitivity, request.Scopes))
+                .Select(state => ToLocalContextState(state, request.IncludeMetadata))
                 .ToList();
 
             return new LocalContextStateResponse
             {
                 ObservedAt = _latestObservedAt,
-                States = states
+                States = states,
+                PolicyVersion = _policyVersion
             };
         }
     }
@@ -141,19 +149,28 @@ public sealed class LocalContextHub
     {
         lock (_lock)
         {
-            TrimEvents(DateTimeOffset.Now);
+            var now = DateTimeOffset.Now;
+            TrimEvents(now);
+            _cursorTracker.PruneStale(now);
 
-            var clientId = NormalizeClientId(request.ClientId);
             var limit = NormalizeLimit(request.Limit);
             var isHistoryQuery = request.Since.HasValue || request.Until.HasValue;
-            var cursorResult = ResolveCursor(clientId, request.Cursor, isHistoryQuery);
+            var cursorResult = _cursorTracker.Resolve(
+                request.ClientId,
+                request.Cursor,
+                isHistoryQuery,
+                FirstSequence(),
+                LatestSequence(),
+                now);
 
             var matchingEvents = _events
                 .Where(item => item.Sequence > cursorResult.Sequence)
                 .Where(item => !request.Since.HasValue || item.ObservedAt >= request.Since.Value)
                 .Where(item => !request.Until.HasValue || item.ObservedAt <= request.Until.Value)
                 .Where(item => IsNameIncluded(item.Name, request.Names))
-                .Where(item => IsSensitivityAllowed(item.Sensitivity, request.Scopes))
+                .Select(item => SensitivityScopeFilter.FilterEventForScope(item, request.Scopes))
+                .Where(item => item is not null)
+                .Select(item => request.IncludePayload ? item! : StripPayload(item!))
                 .Take(limit + 1)
                 .ToList();
 
@@ -167,22 +184,31 @@ public sealed class LocalContextHub
             // pagination は呼び出し側が NextCursor を渡すことで行う。
             if (!isHistoryQuery)
             {
-                _clientPositions[clientId] = lastSequence;
+                _cursorTracker.Advance(request.ClientId, lastSequence, now);
             }
 
             return new LocalContextPollResponse
             {
                 Events = returnedEvents,
-                NextCursor = EncodeCursor(lastSequence),
+                NextCursor = LocalContextCursorTracker.Encode(lastSequence),
                 HasMore = matchingEvents.Count > limit,
                 CursorExpired = cursorResult.Expired,
                 Retention = new LocalContextRetentionInfo
                 {
                     MaxAgeHours = _maxEventAgeHours,
                     MaxEvents = _maxEventCount
-                }
+                },
+                PolicyVersion = _policyVersion
             };
         }
+    }
+
+    public LocalContextEventSchemasResponse GetEventSchemas()
+    {
+        return new LocalContextEventSchemasResponse
+        {
+            Events = AmbientContextCatalog.GetEventSchemas()
+        };
     }
 
     public LocalContextPolicyResponse GetPolicy()
@@ -259,42 +285,44 @@ public sealed class LocalContextHub
         }
     }
 
-    private CursorResult ResolveCursor(string clientId, string cursor, bool isHistoryQuery)
+    /// <summary>
+    /// PayloadSensitivity / MaxFieldSensitivity が空のままの _events エントリを
+    /// 現在の _privacyClassifications から再計算して詰め直す。
+    /// アップグレード直後の events.jsonl 復元エントリ (= 旧スキーマ) を新フィルタが正しく
+    /// 間引けるようにする目的。返り値は実際に 1 件以上書き換えたかどうか。
+    /// </summary>
+    private bool BackfillLegacyPayloadSensitivity()
     {
-        if (TryDecodeCursor(cursor, out var cursorSequence))
+        var backfilled = false;
+        for (var i = 0; i < _events.Count; i++)
         {
-            return new CursorResult(ClampExpiredCursor(cursorSequence), IsExpired(cursorSequence));
+            var current = _events[i];
+            if (!string.IsNullOrEmpty(current.MaxFieldSensitivity))
+            {
+                continue;
+            }
+
+            var (perKey, max) = SensitivityScopeFilter.ComputePayloadSensitivity(
+                current.Name,
+                current.Payload,
+                _privacyClassifications,
+                current.Sensitivity);
+            _events[i] = new LocalContextEvent
+            {
+                Id = current.Id,
+                Sequence = current.Sequence,
+                ObservedAt = current.ObservedAt,
+                Name = current.Name,
+                Value = current.Value,
+                Payload = current.Payload,
+                Sensitivity = current.Sensitivity,
+                PayloadSensitivity = perKey,
+                MaxFieldSensitivity = max
+            };
+            backfilled = true;
         }
 
-        if (isHistoryQuery)
-        {
-            // history query は保持範囲の先頭から開始。クライアント位置は触らない。
-            return new CursorResult(_events.Count == 0 ? 0 : Math.Max(0, _events[0].Sequence - 1), false);
-        }
-
-        if (_clientPositions.TryGetValue(clientId, out var clientSequence))
-        {
-            return new CursorResult(ClampExpiredCursor(clientSequence), IsExpired(clientSequence));
-        }
-
-        var latestSequence = _events.Count == 0 ? 0 : _events[^1].Sequence;
-        _clientPositions[clientId] = latestSequence;
-        return new CursorResult(latestSequence, false);
-    }
-
-    private long ClampExpiredCursor(long sequence)
-    {
-        if (!IsExpired(sequence))
-        {
-            return sequence;
-        }
-
-        return _events.Count == 0 ? 0 : Math.Max(0, _events[0].Sequence - 1);
-    }
-
-    private bool IsExpired(long sequence)
-    {
-        return _events.Count > 0 && sequence < _events[0].Sequence - 1;
+        return backfilled;
     }
 
     /// <summary>
@@ -322,76 +350,27 @@ public sealed class LocalContextHub
         return trimmed;
     }
 
-    private static string ResolveEventLogPath(string settingsPath)
-    {
-        var directory = Path.GetDirectoryName(settingsPath);
-        return string.IsNullOrWhiteSpace(directory)
-            ? "events.jsonl"
-            : Path.Combine(directory, "events.jsonl");
-    }
-
     /// <summary>
     /// 起動時に既存 events.jsonl を読み込んで _events / _eventFingerprints / _nextSequence を再構築する。
-    /// 読み込み後、現在の age/count 制限で trim する。ファイル破損や JSON エラーは黙って無視する
-    /// (Hub には ILogger が無い設計なので、復元失敗で起動が止まらないことを優先)。
+    /// 読み込み後、現在の age/count 制限で trim する。
     /// </summary>
     private void LoadPersistedEventLog()
     {
         lock (_lock)
         {
-            if (!File.Exists(_eventLogPath))
+            foreach (var loaded in _eventLog.Load())
             {
-                return;
-            }
-
-            try
-            {
-                using var stream = File.OpenRead(_eventLogPath);
-                using var reader = new StreamReader(stream, Encoding.UTF8);
-                string? line;
-                while ((line = reader.ReadLine()) is not null)
+                var fingerprint = GetFingerprint(loaded);
+                if (!_eventFingerprints.Add(fingerprint))
                 {
-                    if (string.IsNullOrWhiteSpace(line))
-                    {
-                        continue;
-                    }
-
-                    LocalContextEvent? loaded;
-                    try
-                    {
-                        loaded = JsonSerializer.Deserialize<LocalContextEvent>(line, JsonlOptions);
-                    }
-                    catch (JsonException)
-                    {
-                        // 1 行壊れていても続行する。
-                        continue;
-                    }
-
-                    if (loaded is null)
-                    {
-                        continue;
-                    }
-
-                    var fingerprint = GetFingerprint(loaded);
-                    if (!_eventFingerprints.Add(fingerprint))
-                    {
-                        continue;
-                    }
-
-                    _events.Add(loaded);
-                    if (loaded.Sequence > _nextSequence)
-                    {
-                        _nextSequence = loaded.Sequence;
-                    }
+                    continue;
                 }
-            }
-            catch (IOException)
-            {
-                return;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return;
+
+                _events.Add(loaded);
+                if (loaded.Sequence > _nextSequence)
+                {
+                    _nextSequence = loaded.Sequence;
+                }
             }
 
             _events.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
@@ -405,81 +384,17 @@ public sealed class LocalContextHub
 
     private void AppendEventsUnlocked(IReadOnlyList<LocalContextEvent> events)
     {
-        try
-        {
-            EnsureEventLogDirectoryUnlocked();
-            using var stream = new FileStream(
-                _eventLogPath,
-                FileMode.Append,
-                FileAccess.Write,
-                FileShare.Read);
-            using var writer = new StreamWriter(stream, new UTF8Encoding(false));
-            foreach (var item in events)
-            {
-                writer.WriteLine(JsonSerializer.Serialize(item, JsonlOptions));
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        _eventLog.Append(events);
     }
 
     private void RewriteEventLogUnlocked()
     {
-        try
-        {
-            EnsureEventLogDirectoryUnlocked();
-            var tempPath = _eventLogPath + ".tmp";
-            using (var stream = new FileStream(
-                tempPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.Read))
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
-            {
-                foreach (var item in _events)
-                {
-                    writer.WriteLine(JsonSerializer.Serialize(item, JsonlOptions));
-                }
-            }
-
-            File.Move(tempPath, _eventLogPath, overwrite: true);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        _eventLog.Rewrite(_events);
     }
 
     private void DeleteEventLogUnlocked()
     {
-        try
-        {
-            if (File.Exists(_eventLogPath))
-            {
-                File.Delete(_eventLogPath);
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
-
-    private void EnsureEventLogDirectoryUnlocked()
-    {
-        var directory = Path.GetDirectoryName(_eventLogPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        _eventLog.Delete();
     }
 
     public static int NormalizeMaxEventAgeHours(int hours)
@@ -502,9 +417,14 @@ public sealed class LocalContextHub
         return Math.Clamp(count, MinMaxEventCount, MaxMaxEventCount);
     }
 
-    private static string NormalizeClientId(string clientId)
+    private long FirstSequence()
     {
-        return string.IsNullOrWhiteSpace(clientId) ? "anonymous" : clientId.Trim();
+        return _events.Count == 0 ? 0 : _events[0].Sequence;
+    }
+
+    private long LatestSequence()
+    {
+        return _events.Count == 0 ? 0 : _events[^1].Sequence;
     }
 
     private static int NormalizeLimit(int limit)
@@ -522,6 +442,17 @@ public sealed class LocalContextHub
         return names.Count == 0 || names.Contains(name, StringComparer.OrdinalIgnoreCase);
     }
 
+    private static LocalContextState ToLocalContextState(AmbientState state, bool includeMetadata)
+    {
+        return new LocalContextState
+        {
+            ObservedAt = includeMetadata ? state.ObservedAt : null,
+            Name = state.Name,
+            Value = state.Value,
+            Sensitivity = includeMetadata ? state.Sensitivity : null
+        };
+    }
+
     private static LocalContextEffectivePolicy BuildEffectivePolicy(
         PrivacyClassification classification,
         AmbientTransmissionPolicySnapshot transmissionPolicy)
@@ -536,7 +467,7 @@ public sealed class LocalContextHub
         {
             Path = classification.Path,
             Sensitivity = classification.Sensitivity,
-            RequiredScope = "context." + NormalizeSensitivity(classification.Sensitivity) + ":read",
+            RequiredScope = "context." + SensitivityScopeFilter.NormalizeSensitivity(classification.Sensitivity) + ":read",
             DefaultTransmit = classification.DefaultTransmit,
             EffectiveTransmit = hasOverride ? overrideTransmit : classification.DefaultTransmit,
             HasOverride = hasOverride,
@@ -575,73 +506,28 @@ public sealed class LocalContextHub
         return false;
     }
 
-    private static bool IsSensitivityAllowed(string sensitivity, IReadOnlyList<string> scopes)
+    /// <summary>
+    /// 要約モードで返すために payload と payloadSensitivity を空にした複製を作る。
+    /// id / sequence / observedAt / name / value / sensitivity / maxFieldSensitivity は保持する。
+    /// </summary>
+    private static LocalContextEvent StripPayload(LocalContextEvent ev)
     {
-        var requestedLevel = GetSensitivityLevel(sensitivity);
-        var allowedLevel = scopes switch
+        return new LocalContextEvent
         {
-            var value when value.Contains("context.high:read", StringComparer.OrdinalIgnoreCase) => 3,
-            var value when value.Contains("context.medium:read", StringComparer.OrdinalIgnoreCase) => 2,
-            var value when value.Contains("context.low:read", StringComparer.OrdinalIgnoreCase) => 1,
-            _ => 1
-        };
-
-        return requestedLevel <= allowedLevel;
-    }
-
-    private static int GetSensitivityLevel(string sensitivity)
-    {
-        return NormalizeSensitivity(sensitivity) switch
-        {
-            "high" => 3,
-            "medium" => 2,
-            _ => 1
-        };
-    }
-
-    private static string NormalizeSensitivity(string sensitivity)
-    {
-        return sensitivity.ToLowerInvariant() switch
-        {
-            "high" => "high",
-            "medium" => "medium",
-            _ => "low"
+            Id = ev.Id,
+            Sequence = ev.Sequence,
+            ObservedAt = ev.ObservedAt,
+            Name = ev.Name,
+            Value = ev.Value,
+            Sensitivity = ev.Sensitivity,
+            MaxFieldSensitivity = ev.MaxFieldSensitivity
+            // Payload / PayloadSensitivity は init 既定の空 dict のまま
         };
     }
 
     private static string CreateEventId(DateTimeOffset observedAt, long sequence)
     {
         return $"evt_{observedAt.UtcDateTime:yyyyMMddHHmmssfff}_{sequence:D6}";
-    }
-
-    private static string EncodeCursor(long sequence)
-    {
-        return Convert.ToBase64String(Encoding.UTF8.GetBytes("seq:" + sequence))
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
-    }
-
-    private static bool TryDecodeCursor(string cursor, out long sequence)
-    {
-        sequence = 0;
-        if (string.IsNullOrWhiteSpace(cursor))
-        {
-            return false;
-        }
-
-        try
-        {
-            var padded = cursor.Replace('-', '+').Replace('_', '/');
-            padded = padded.PadRight(padded.Length + ((4 - padded.Length % 4) % 4), '=');
-            var text = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
-            return text.StartsWith("seq:", StringComparison.OrdinalIgnoreCase) &&
-                   long.TryParse(text[4..], out sequence);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private static string GetFingerprint(AmbientOutboundEvent outboundEvent)
@@ -672,6 +558,4 @@ public sealed class LocalContextHub
                 .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(item => item.Key + "=" + item.Value));
     }
-
-    private readonly record struct CursorResult(long Sequence, bool Expired);
 }
