@@ -121,7 +121,9 @@ public sealed class JsonFileSettingsStore : ISettingsStore
             settings.SchemaVersion = 1;
 
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(settings, AmbientContextJson.Options));
+            var tempPath = _path + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(settings, AmbientContextJson.Options));
+            File.Move(tempPath, _path, overwrite: true);
         }
     }
 

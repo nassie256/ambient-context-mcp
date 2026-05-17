@@ -16,7 +16,7 @@ public class SensitivityFilterTests
     [Fact]
     public void LookupPayloadFieldSensitivity_returns_exact_match()
     {
-        var result = LocalContextHub.LookupPayloadFieldSensitivityForTest(
+        var result = SensitivityScopeFilter.LookupPayloadFieldSensitivity(
             eventName: "media_session_changed",
             payloadKey: "title",
             classifications: Classifications,
@@ -28,7 +28,7 @@ public class SensitivityFilterTests
     [Fact]
     public void LookupPayloadFieldSensitivity_falls_back_to_event_level()
     {
-        var result = LocalContextHub.LookupPayloadFieldSensitivityForTest(
+        var result = SensitivityScopeFilter.LookupPayloadFieldSensitivity(
             eventName: "media_session_changed",
             payloadKey: "source_app",
             classifications: Classifications,
@@ -47,7 +47,7 @@ public class SensitivityFilterTests
             { "source_app", "Chrome" }
         };
 
-        var (perKey, max) = LocalContextHub.ComputePayloadSensitivityForTest(
+        var (perKey, max) = SensitivityScopeFilter.ComputePayloadSensitivity(
             eventName: "media_session_changed",
             payload: payload,
             classifications: Classifications,
@@ -68,7 +68,7 @@ public class SensitivityFilterTests
             { "to", "ac" }
         };
 
-        var (perKey, max) = LocalContextHub.ComputePayloadSensitivityForTest(
+        var (perKey, max) = SensitivityScopeFilter.ComputePayloadSensitivity(
             eventName: "ac_power_connected",
             payload: payload,
             classifications: Classifications,
@@ -103,7 +103,7 @@ public class SensitivityFilterTests
             MaxFieldSensitivity = "high"
         };
 
-        var filtered = LocalContextHub.FilterEventForScopeForTest(ev, ["context.medium:read"]);
+        var filtered = SensitivityScopeFilter.FilterEventForScope(ev, ["context.medium:read"]);
 
         Assert.NotNull(filtered);
         Assert.False(filtered!.Payload.ContainsKey("title"));
@@ -133,7 +133,7 @@ public class SensitivityFilterTests
             }
         };
 
-        var filtered = LocalContextHub.FilterEventForScopeForTest(ev, ["context.low:read"]);
+        var filtered = SensitivityScopeFilter.FilterEventForScope(ev, ["context.low:read"]);
 
         Assert.Null(filtered);
     }
@@ -156,7 +156,7 @@ public class SensitivityFilterTests
             }
         };
 
-        var filtered = LocalContextHub.FilterEventForScopeForTest(ev, ["context.low:read"]);
+        var filtered = SensitivityScopeFilter.FilterEventForScope(ev, ["context.low:read"]);
 
         Assert.NotNull(filtered);
         Assert.True(filtered!.Payload.ContainsKey("to"));

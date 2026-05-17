@@ -15,9 +15,9 @@ namespace AmbientContextMcp.Core.Models;
 /// emit 側でキーを追加・改名・削除したら、ここも更新する。drift を機械的に検出する手段はないので
 /// 注意。
 /// </summary>
-public static class EventSchemaCatalog
+public static partial class AmbientContextCatalog
 {
-    public static IReadOnlyList<EventSchema> GetAll()
+    public static IReadOnlyList<EventSchema> GetEventSchemas()
     {
         return
         [
@@ -97,8 +97,8 @@ public static class EventSchemaCatalog
                 Key("percent", "low", "現在の残量パーセント。", "Current battery percent.", "8")),
 
             Schema("battery_percent_crossed_threshold", "low",
-                "残量が 80 / 50 / 30 / 20 / 10 % のいずれかを跨いだ瞬間。プロンプトのタイミング信号。",
-                "Fires when battery percent crosses one of the 80 / 50 / 30 / 20 / 10 thresholds.",
+                "残量が 80 / 50 / 30 / 20 % のいずれかを跨いだ瞬間。プロンプトのタイミング信号。",
+                "Fires when battery percent crosses one of the 80 / 50 / 30 / 20 thresholds.",
                 Key("threshold", "low", "跨いだしきい値。", "The crossed threshold.", "30"),
                 Key("direction", "low", "\"up\" or \"down\".", "\"up\" or \"down\".", "down"),
                 Key("from", "low", "直前の残量パーセント。", "Previous battery percent.", "31"),
@@ -257,10 +257,4 @@ public static class EventSchemaCatalog
             Description = PickReason(descriptionJa, descriptionEn),
             Example = example
         };
-
-    private static string PickReason(string reasonJa, string reasonEn)
-    {
-        var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        return culture.Equals("ja", StringComparison.OrdinalIgnoreCase) ? reasonJa : reasonEn;
-    }
 }

@@ -131,11 +131,7 @@ public sealed class TrayHost : IDisposable
 
     private void OnCopyClaudeCodeSnippetClick(object? sender, EventArgs e)
     {
-        var snippet =
-            $"claude mcp add ambient-context " +
-            $"--transport http {_mcpHost.McpUrl} " +
-            $"--header \"Authorization: Bearer {_mcpHost.Token}\"";
-        SafeCopy(snippet);
+        SafeCopy(McpClientSnippets.BuildClaudeCodeSnippet(_mcpHost.McpUrl, _mcpHost.Token));
     }
 
     private void OnPauseResumeClick(object? sender, EventArgs e)

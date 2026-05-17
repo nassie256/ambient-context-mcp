@@ -1,4 +1,5 @@
 using AmbientContextMcp.Core.Models;
+using System.Text.Json.Serialization;
 
 namespace AmbientContextMcp.Core.Hub;
 
@@ -15,7 +16,7 @@ public sealed class LocalContextStateResponse
 {
     public DateTimeOffset ObservedAt { get; init; }
 
-    public IReadOnlyList<AmbientState> States { get; init; } = [];
+    public IReadOnlyList<LocalContextState> States { get; init; } = [];
 
     public string Source { get; init; } = "outboundStates";
 
@@ -25,6 +26,19 @@ public sealed class LocalContextStateResponse
     /// ポリシーに変化があった場合にのみ値が変わる。
     /// </summary>
     public string PolicyVersion { get; init; } = "";
+}
+
+public sealed class LocalContextState
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTimeOffset? ObservedAt { get; init; }
+
+    public string Name { get; init; } = "";
+
+    public string Value { get; init; } = "";
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Sensitivity { get; init; }
 }
 
 public sealed class LocalContextPollRequest
