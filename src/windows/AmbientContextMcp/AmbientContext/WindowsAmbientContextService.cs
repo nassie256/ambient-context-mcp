@@ -293,7 +293,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
                 wellness,
                 displays),
             Events = BuildEvents(events),
-            PrivacyClassifications = GetPrivacyClassifications()
+            PrivacyClassifications = AmbientContextCatalog.GetPrivacyClassifications()
         };
         return ApplyTransmissionPolicy(outboundSnapshot);
     }

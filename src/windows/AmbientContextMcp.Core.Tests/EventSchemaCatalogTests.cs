@@ -81,4 +81,30 @@ public class EventSchemaCatalogTests
         Assert.Equal("eventSchemaCatalog", response.Source);
         Assert.NotEmpty(response.Events);
     }
+
+    [Fact]
+    public void Every_event_schema_has_privacy_classification()
+    {
+        var classifications = AmbientContextCatalog.GetPrivacyClassifications()
+            .Select(item => item.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var schema in EventSchemaCatalog.GetAll())
+        {
+            Assert.Contains("events." + schema.Name, classifications);
+        }
+    }
+
+    [Fact]
+    public void Every_transmission_option_has_privacy_classification()
+    {
+        var classifications = AmbientContextCatalog.GetPrivacyClassifications()
+            .Select(item => item.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var option in AmbientContextCatalog.GetTransmissionOptions())
+        {
+            Assert.Contains(option.Path, classifications);
+        }
+    }
 }

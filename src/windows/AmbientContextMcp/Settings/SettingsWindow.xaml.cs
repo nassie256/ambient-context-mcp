@@ -9,6 +9,7 @@ using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using Clipboard = System.Windows.Clipboard;
 using AmbientContextMcp.Autostart;
 using AmbientContextMcp.Core.Hub;
+using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Policy;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Mcp;
@@ -281,34 +282,9 @@ public partial class SettingsWindow : Window
 
     private static List<TransmissionOptionViewModel> CreateTransmissionOptions()
     {
-        return
-        [
-            Option("foregroundApp.category", Strings.TxOptForegroundCategory, "medium"),
-            Option("foregroundApp.appName", Strings.TxOptForegroundAppName, "medium"),
-            Option("foregroundApp.processName", Strings.TxOptForegroundProcessName, "medium"),
-            Option("foregroundApp.titleSummary", Strings.TxOptForegroundTitleSummary, "medium"),
-            Option("foregroundApp.rawWindowTitle", Strings.TxOptForegroundRawWindowTitle, "high"),
-            // events.foreground_app_category_changed は廃止済み (foreground_changed の category_changed フラグに統合)。
-            // UI から外し、ユーザーが新規に opt-in できないようにする。既存 override は classification 経由で残り、
-            // 発火しなくなった event に対しても無害。
-            Option("events.foreground_changed", Strings.TxOptEventForegroundChanged, "medium"),
-            Option("activity.contextSwitchesPerMin", Strings.TxOptActivityContextSwitches, "medium"),
-            Option("events.context_switch_burst", Strings.TxOptEventContextSwitchBurst, "medium"),
-            Option("media.isAvailable", Strings.TxOptMediaIsAvailable, "medium"),
-            Option("media.playbackStatus", Strings.TxOptMediaPlaybackStatus, "medium"),
-            Option("media.sourceAppUserModelId", Strings.TxOptMediaSourceApp, "medium"),
-            Option("media.title", Strings.TxOptMediaTitle, "high"),
-            Option("media.artist", Strings.TxOptMediaArtist, "high"),
-            Option("media.albumTitle", Strings.TxOptMediaAlbumTitle, "high"),
-            Option("events.media_playback_started", Strings.TxOptEventMediaPlaybackStarted, "medium"),
-            Option("events.media_playback_paused", Strings.TxOptEventMediaPlaybackPaused, "medium"),
-            Option("events.media_session_changed", Strings.TxOptEventMediaSessionChanged, "medium"),
-            Option("events.media_session_changed.title", Strings.TxOptEventMediaSessionChangedTitle, "high"),
-            Option("events.media_session_changed.artist", Strings.TxOptEventMediaSessionChangedArtist, "high"),
-            Option("system.timeZoneId", Strings.TxOptSystemTimeZone, "medium"),
-            Option("display.count", Strings.TxOptDisplayCount, "medium"),
-            Option("displays", Strings.TxOptDisplays, "medium")
-        ];
+        return AmbientContextCatalog.GetTransmissionOptions()
+            .Select(option => Option(option.Path, GetTransmissionOptionLabel(option.Path), option.Sensitivity))
+            .ToList();
     }
 
     private static TransmissionOptionViewModel Option(string path, string label, string sensitivity)
@@ -318,6 +294,36 @@ public partial class SettingsWindow : Window
             Path = path,
             Label = label,
             Sensitivity = sensitivity
+        };
+    }
+
+    private static string GetTransmissionOptionLabel(string path)
+    {
+        return path switch
+        {
+            "foregroundApp.category" => Strings.TxOptForegroundCategory,
+            "foregroundApp.appName" => Strings.TxOptForegroundAppName,
+            "foregroundApp.processName" => Strings.TxOptForegroundProcessName,
+            "foregroundApp.titleSummary" => Strings.TxOptForegroundTitleSummary,
+            "foregroundApp.rawWindowTitle" => Strings.TxOptForegroundRawWindowTitle,
+            "events.foreground_changed" => Strings.TxOptEventForegroundChanged,
+            "activity.contextSwitchesPerMin" => Strings.TxOptActivityContextSwitches,
+            "events.context_switch_burst" => Strings.TxOptEventContextSwitchBurst,
+            "media.isAvailable" => Strings.TxOptMediaIsAvailable,
+            "media.playbackStatus" => Strings.TxOptMediaPlaybackStatus,
+            "media.sourceAppUserModelId" => Strings.TxOptMediaSourceApp,
+            "media.title" => Strings.TxOptMediaTitle,
+            "media.artist" => Strings.TxOptMediaArtist,
+            "media.albumTitle" => Strings.TxOptMediaAlbumTitle,
+            "events.media_playback_started" => Strings.TxOptEventMediaPlaybackStarted,
+            "events.media_playback_paused" => Strings.TxOptEventMediaPlaybackPaused,
+            "events.media_session_changed" => Strings.TxOptEventMediaSessionChanged,
+            "events.media_session_changed.title" => Strings.TxOptEventMediaSessionChangedTitle,
+            "events.media_session_changed.artist" => Strings.TxOptEventMediaSessionChangedArtist,
+            "system.timeZoneId" => Strings.TxOptSystemTimeZone,
+            "display.count" => Strings.TxOptDisplayCount,
+            "displays" => Strings.TxOptDisplays,
+            _ => path
         };
     }
 
