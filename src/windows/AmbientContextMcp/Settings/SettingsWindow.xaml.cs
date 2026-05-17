@@ -113,11 +113,7 @@ public partial class SettingsWindow : Window
 
     private void OnCopyClaudeCodeSnippetClick(object sender, RoutedEventArgs e)
     {
-        var snippet =
-            $"claude mcp add ambient-context " +
-            $"--transport http {_mcpHost.McpUrl} " +
-            $"--header \"Authorization: Bearer {_mcpHost.Token}\"";
-        SafeCopy(snippet);
+        SafeCopy(McpClientSnippets.BuildClaudeCodeSnippet(_mcpHost.McpUrl, _mcpHost.Token));
         SettingsStatusText.Text = Strings.StatusClaudeCodeCopied;
     }
 

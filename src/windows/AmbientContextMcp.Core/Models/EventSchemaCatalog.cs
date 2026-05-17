@@ -97,8 +97,8 @@ public static class EventSchemaCatalog
                 Key("percent", "low", "現在の残量パーセント。", "Current battery percent.", "8")),
 
             Schema("battery_percent_crossed_threshold", "low",
-                "残量が 80 / 50 / 30 / 20 / 10 % のいずれかを跨いだ瞬間。プロンプトのタイミング信号。",
-                "Fires when battery percent crosses one of the 80 / 50 / 30 / 20 / 10 thresholds.",
+                "残量が 80 / 50 / 30 / 20 % のいずれかを跨いだ瞬間。プロンプトのタイミング信号。",
+                "Fires when battery percent crosses one of the 80 / 50 / 30 / 20 thresholds.",
                 Key("threshold", "low", "跨いだしきい値。", "The crossed threshold.", "30"),
                 Key("direction", "low", "\"up\" or \"down\".", "\"up\" or \"down\".", "down"),
                 Key("from", "low", "直前の残量パーセント。", "Previous battery percent.", "31"),

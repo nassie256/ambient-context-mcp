@@ -18,8 +18,8 @@ public class PolicyVersionTests
             { "media.title", true }
         };
 
-        var a = LocalContextHub.ComputePolicyVersionForTest(classifications, overrides);
-        var b = LocalContextHub.ComputePolicyVersionForTest(classifications, overrides);
+        var a = PolicyVersionService.ComputePolicyVersion(classifications, overrides);
+        var b = PolicyVersionService.ComputePolicyVersion(classifications, overrides);
 
         Assert.False(string.IsNullOrEmpty(a));
         Assert.Equal(a, b);
@@ -39,8 +39,8 @@ public class PolicyVersionTests
             { "media.title", true }
         };
 
-        var before = LocalContextHub.ComputePolicyVersionForTest(classifications, beforeOverrides);
-        var after = LocalContextHub.ComputePolicyVersionForTest(classifications, afterOverrides);
+        var before = PolicyVersionService.ComputePolicyVersion(classifications, beforeOverrides);
+        var after = PolicyVersionService.ComputePolicyVersion(classifications, afterOverrides);
 
         Assert.NotEqual(before, after);
     }
@@ -64,8 +64,8 @@ public class PolicyVersionTests
         };
 
         Assert.Equal(
-            LocalContextHub.ComputePolicyVersionForTest(classifications, ordered1),
-            LocalContextHub.ComputePolicyVersionForTest(classifications, ordered2));
+            PolicyVersionService.ComputePolicyVersion(classifications, ordered1),
+            PolicyVersionService.ComputePolicyVersion(classifications, ordered2));
     }
 
     [Fact]
