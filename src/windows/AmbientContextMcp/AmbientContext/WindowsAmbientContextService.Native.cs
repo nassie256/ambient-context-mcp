@@ -120,11 +120,4 @@ public sealed partial class WindowsAmbientContextService
         public ulong AvailExtendedVirtual;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct PowerBroadcastSettingHeader
-    {
-        public Guid PowerSetting;
-
-        public int DataLength;
-    }
 }

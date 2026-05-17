@@ -3,16 +3,11 @@ using System.IO;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using AmbientContextMcp.Core.Mcp;
 using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Policy;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Win32;
 using Microsoft.Extensions.Logging;
-using Windows.Media.Control;
 using ActivityContext = AmbientContextMcp.Core.Models.ActivityContext;
 
 namespace AmbientContextMcp.AmbientContext;
@@ -44,24 +39,11 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     private const uint WinEventSkipOwnProcess = 0x0002;
     private const int DeviceNotifyWindowHandle = 0;
 
-    private static readonly Guid GuidAcDcPowerSource = new("5D3E9A59-E9D5-4B00-A6BD-FF34FF516548");
-    private static readonly Guid GuidBatteryPercentageRemaining = new("A7AD8041-B45A-4CAE-87A3-EECBB468A9E1");
-    private static readonly Guid GuidConsoleDisplayState = new("6FE69556-704A-47A0-8F24-C28D936FDA47");
-    private static readonly Guid GuidGlobalUserPresence = new("786E8A1D-B427-4344-9207-09E70BDCBEA9");
-    private static readonly Guid GuidLidSwitchStateChange = new("BA3E0F4D-B817-4094-A2D1-D56379E6A0F3");
-    private static readonly Guid GuidMonitorPowerOn = new("02731015-4510-4526-99E6-E5A17EBD1AEA");
-    private static readonly Guid GuidPowerSavingStatus = new("E00958C0-C213-4ACE-AC77-FECCED2EEEA5");
-    private static readonly Guid GuidSessionDisplayStatus = new("2B84C20E-AD23-4DDF-93DB-05FFBD7EFCA5");
-
-    private static readonly JsonSerializerOptions JsonOptions = new(AmbientContextJson.Options)
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
-
     private readonly MessageOnlyWindow _messageWindow;
     private readonly ISettingsStore _settingsStore;
     private readonly ILogger<WindowsAmbientContextService> _logger;
     private readonly string _snapshotPath;
+    private readonly AmbientSnapshotWriter _snapshotWriter;
     private readonly List<AmbientEvent> _recentEvents = [];
     private readonly List<IntPtr> _powerNotificationHandles = [];
     private readonly WinEventProc _foregroundProc;
@@ -111,6 +93,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _messageWindow = messageWindow ?? throw new ArgumentNullException(nameof(messageWindow));
         _snapshotPath = snapshotPath ?? GetDefaultSnapshotPath();
+        _snapshotWriter = new AmbientSnapshotWriter(_snapshotPath);
         _foregroundProc = OnForegroundEvent;
         _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore, GetPrivacyClassificationsForUi());
         _lastActivityDate = _settingsStore.LoadTransientStateSettings().LastActivityDate;
@@ -227,7 +210,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         var foreground = GetForegroundApp();
         var battery = GetBattery();
         var network = GetNetwork();
-        var media = GetMedia();
+        var media = WindowsMediaContextCollector.GetMedia();
         var power = GetPower();
         var system = GetSystem();
         var systemLoad = GetSystemLoad();
@@ -279,7 +262,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             Wellness = wellness,
             Displays = displays,
             RecentEvents = events,
-            States = BuildStates(
+            States = AmbientContextProjector.BuildStates(
                 observedAt,
                 presence,
                 foreground,
@@ -292,7 +275,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
                 activity,
                 wellness,
                 displays),
-            Events = BuildEvents(events),
+            Events = AmbientContextProjector.BuildEvents(events),
             PrivacyClassifications = AmbientContextCatalog.GetPrivacyClassifications()
         };
         return ApplyTransmissionPolicy(outboundSnapshot);
@@ -395,7 +378,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         try
         {
             LatestSnapshot = Capture();
-            WriteSnapshot(LatestSnapshot);
+            _snapshotWriter.Write(LatestSnapshot);
             SnapshotUpdated?.Invoke(this, LatestSnapshot);
         }
         catch (Exception ex)
@@ -428,31 +411,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             PrivacyClassifications = snapshot.PrivacyClassifications,
             TransmissionPolicy = _transmissionPolicy.Snapshot
         };
-    }
-
-    private void WriteSnapshot(AmbientContextSnapshot snapshot)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(_snapshotPath)!);
-        var tempPath = _snapshotPath + ".tmp";
-        File.WriteAllText(tempPath, SerializeReadableJson(snapshot), Encoding.UTF8);
-        File.Move(tempPath, _snapshotPath, true);
-    }
-
-    private static string SerializeReadableJson(AmbientContextSnapshot snapshot)
-    {
-        var json = JsonSerializer.Serialize(snapshot, JsonOptions);
-        return Regex.Replace(
-            json,
-            @"\\u([0-9a-fA-F]{4})",
-            match =>
-            {
-                var value = Convert.ToInt32(match.Groups[1].Value, 16);
-                var character = (char)value;
-                return char.IsControl(character) || character is '"' or '\\'
-                    ? match.Value
-                    : character.ToString();
-            },
-            RegexOptions.CultureInvariant);
     }
 
     private PresenceContext GetPresence()
@@ -574,161 +532,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         return new NetworkContext
         {
             IsAvailable = NetworkInterface.GetIsNetworkAvailable()
-        };
-    }
-
-    // SMTC API は WinRT のセッションプロセス (各 media app) を経由するため、
-    // 相手アプリがハング/未応答の場合、await が永久に返らないことがある。
-    // 取得スレッドは MessageOnlyWindow の単一スレッドで、ここが詰まると
-    // foreground hook など全イベント処理が止まる (= 過去に observed)。
-    // 短い timeout でタスクが返らなければ「media 不明」として続行する。
-    private static readonly TimeSpan MediaApiTimeout = TimeSpan.FromMilliseconds(1500);
-
-    private static MediaContext GetMedia()
-    {
-        try
-        {
-            var requestTask = GlobalSystemMediaTransportControlsSessionManager.RequestAsync().AsTask();
-            if (!requestTask.Wait(MediaApiTimeout))
-            {
-                return new MediaContext { Error = "GetMedia.RequestAsync timed out" };
-            }
-            var manager = requestTask.Result;
-            var allSessions = manager.GetSessions()
-                .Select(ToMediaSessionContext)
-                .ToList();
-            var currentSession = manager.GetCurrentSession();
-            var currentSource = currentSession?.SourceAppUserModelId ?? "";
-            var selectedSession = allSessions.FirstOrDefault(item => item.IsPlaying)
-                ?? allSessions.FirstOrDefault(item => item.SourceAppUserModelId.Equals(currentSource, StringComparison.OrdinalIgnoreCase))
-                ?? allSessions.FirstOrDefault();
-
-            var sessions = allSessions.Select(item => CopyMediaSession(item, ReferenceEquals(item, selectedSession))).ToList();
-            var session = selectedSession is null ? null : FindSessionBySource(manager, selectedSession.SourceAppUserModelId);
-            if (session is null)
-            {
-                return new MediaContext
-                {
-                    Sessions = sessions
-                };
-            }
-
-            var playbackInfo = session.GetPlaybackInfo();
-            var playbackStatus = playbackInfo.PlaybackStatus.ToString();
-            var timeline = session.GetTimelineProperties();
-            var propsTask = session.TryGetMediaPropertiesAsync().AsTask();
-            if (!propsTask.Wait(MediaApiTimeout))
-            {
-                return new MediaContext
-                {
-                    IsAvailable = true,
-                    SourceAppUserModelId = session.SourceAppUserModelId,
-                    PlaybackStatus = playbackStatus,
-                    IsPlaying = playbackStatus.Equals("Playing", StringComparison.OrdinalIgnoreCase),
-                    PositionMilliseconds = (long)timeline.Position.TotalMilliseconds,
-                    StartTimeMilliseconds = (long)timeline.StartTime.TotalMilliseconds,
-                    EndTimeMilliseconds = (long)timeline.EndTime.TotalMilliseconds,
-                    TimelineLastUpdatedAt = timeline.LastUpdatedTime,
-                    Sessions = sessions,
-                    Error = "GetMedia.TryGetMediaPropertiesAsync timed out"
-                };
-            }
-            var mediaProperties = propsTask.Result;
-
-            return new MediaContext
-            {
-                IsAvailable = true,
-                SourceAppUserModelId = session.SourceAppUserModelId,
-                PlaybackStatus = playbackStatus,
-                IsPlaying = playbackStatus.Equals("Playing", StringComparison.OrdinalIgnoreCase),
-                Title = mediaProperties.Title,
-                Artist = mediaProperties.Artist,
-                AlbumTitle = mediaProperties.AlbumTitle,
-                AlbumArtist = mediaProperties.AlbumArtist,
-                TrackNumber = (int)mediaProperties.TrackNumber,
-                Genres = mediaProperties.Genres?.ToList() ?? [],
-                PositionMilliseconds = (long)timeline.Position.TotalMilliseconds,
-                StartTimeMilliseconds = (long)timeline.StartTime.TotalMilliseconds,
-                EndTimeMilliseconds = (long)timeline.EndTime.TotalMilliseconds,
-                TimelineLastUpdatedAt = timeline.LastUpdatedTime,
-                Sessions = sessions
-            };
-        }
-        catch (Exception ex)
-        {
-            return new MediaContext
-            {
-                Error = ex.GetType().Name + ": " + ex.Message
-            };
-        }
-    }
-
-    private static GlobalSystemMediaTransportControlsSession? FindSessionBySource(
-        GlobalSystemMediaTransportControlsSessionManager manager,
-        string sourceAppUserModelId)
-    {
-        return manager.GetSessions()
-            .FirstOrDefault(item => item.SourceAppUserModelId.Equals(sourceAppUserModelId, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static MediaSessionContext ToMediaSessionContext(GlobalSystemMediaTransportControlsSession session)
-    {
-        try
-        {
-            var playbackInfo = session.GetPlaybackInfo();
-            var playbackStatus = playbackInfo.PlaybackStatus.ToString();
-            var timeline = session.GetTimelineProperties();
-            var propsTask = session.TryGetMediaPropertiesAsync().AsTask();
-            if (!propsTask.Wait(MediaApiTimeout))
-            {
-                return new MediaSessionContext
-                {
-                    SourceAppUserModelId = session.SourceAppUserModelId,
-                    PlaybackStatus = playbackStatus,
-                    IsPlaying = playbackStatus.Equals("Playing", StringComparison.OrdinalIgnoreCase),
-                    PositionMilliseconds = (long)timeline.Position.TotalMilliseconds,
-                    EndTimeMilliseconds = (long)timeline.EndTime.TotalMilliseconds,
-                    Error = "ToMediaSessionContext.TryGetMediaPropertiesAsync timed out"
-                };
-            }
-            var mediaProperties = propsTask.Result;
-
-            return new MediaSessionContext
-            {
-                SourceAppUserModelId = session.SourceAppUserModelId,
-                PlaybackStatus = playbackStatus,
-                IsPlaying = playbackStatus.Equals("Playing", StringComparison.OrdinalIgnoreCase),
-                Title = mediaProperties.Title,
-                Artist = mediaProperties.Artist,
-                AlbumTitle = mediaProperties.AlbumTitle,
-                PositionMilliseconds = (long)timeline.Position.TotalMilliseconds,
-                EndTimeMilliseconds = (long)timeline.EndTime.TotalMilliseconds
-            };
-        }
-        catch (Exception ex)
-        {
-            return new MediaSessionContext
-            {
-                SourceAppUserModelId = session.SourceAppUserModelId,
-                Error = ex.GetType().Name + ": " + ex.Message
-            };
-        }
-    }
-
-    private static MediaSessionContext CopyMediaSession(MediaSessionContext session, bool selected)
-    {
-        return new MediaSessionContext
-        {
-            Selected = selected,
-            SourceAppUserModelId = session.SourceAppUserModelId,
-            PlaybackStatus = session.PlaybackStatus,
-            IsPlaying = session.IsPlaying,
-            Title = session.Title,
-            Artist = session.Artist,
-            AlbumTitle = session.AlbumTitle,
-            PositionMilliseconds = session.PositionMilliseconds,
-            EndTimeMilliseconds = session.EndTimeMilliseconds,
-            Error = session.Error
         };
     }
 
@@ -889,7 +692,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     {
         if (change == PbtPowerSettingChange)
         {
-            var powerSetting = ReadPowerSetting(lParam);
+            var powerSetting = WindowsPowerSettingReader.Read(lParam);
             if (powerSetting.Data.TryGetValue("setting", out var setting) &&
                 powerSetting.Data.TryGetValue("value", out var value))
             {
@@ -954,17 +757,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
 
     private void RegisterPowerSettingNotifications(IntPtr windowHandle)
     {
-        foreach (var guid in new[]
-        {
-            GuidAcDcPowerSource,
-            GuidBatteryPercentageRemaining,
-            GuidConsoleDisplayState,
-            GuidGlobalUserPresence,
-            GuidLidSwitchStateChange,
-            GuidMonitorPowerOn,
-            GuidPowerSavingStatus,
-            GuidSessionDisplayStatus
-        })
+        foreach (var guid in WindowsPowerSettingReader.NotificationGuids)
         {
             var powerSetting = guid;
             var handle = RegisterPowerSettingNotification(windowHandle, ref powerSetting, DeviceNotifyWindowHandle);
@@ -1002,130 +795,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         {
             AddEvent(eventName, data);
         }
-    }
-
-    private static (string Name, IReadOnlyDictionary<string, string> Data) ReadPowerSetting(IntPtr lParam)
-    {
-        if (lParam == IntPtr.Zero)
-        {
-            return ("unknown", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["setting"] = "unknown",
-                ["value"] = "unknown"
-            });
-        }
-
-        try
-        {
-            var header = Marshal.PtrToStructure<PowerBroadcastSettingHeader>(lParam);
-            var dataOffset = Marshal.SizeOf<PowerBroadcastSettingHeader>();
-            var value = header.DataLength >= 4 ? Marshal.ReadInt32(IntPtr.Add(lParam, dataOffset)) : 0;
-            var name = GetPowerSettingName(header.PowerSetting);
-            return (name, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["setting"] = name,
-                ["guid"] = header.PowerSetting.ToString("D"),
-                ["value"] = FormatPowerSettingValue(header.PowerSetting, value),
-                ["raw_value"] = value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["data_length"] = header.DataLength.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            });
-        }
-        catch (Exception ex)
-        {
-            return ("unknown", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["setting"] = "unknown",
-                ["value"] = "unreadable",
-                ["error"] = ex.GetType().Name
-            });
-        }
-    }
-
-    private static string GetPowerSettingName(Guid guid)
-    {
-        if (guid == GuidAcDcPowerSource)
-        {
-            return "ac_dc_power_source";
-        }
-
-        if (guid == GuidBatteryPercentageRemaining)
-        {
-            return "battery_percentage_remaining";
-        }
-
-        if (guid == GuidConsoleDisplayState)
-        {
-            return "console_display_state";
-        }
-
-        if (guid == GuidGlobalUserPresence)
-        {
-            return "global_user_presence";
-        }
-
-        if (guid == GuidLidSwitchStateChange)
-        {
-            return "lid_switch_state";
-        }
-
-        if (guid == GuidMonitorPowerOn)
-        {
-            return "monitor_power_on";
-        }
-
-        if (guid == GuidPowerSavingStatus)
-        {
-            return "power_saving_status";
-        }
-
-        if (guid == GuidSessionDisplayStatus)
-        {
-            return "session_display_status";
-        }
-
-        return "unknown";
-    }
-
-    private static string FormatPowerSettingValue(Guid guid, int value)
-    {
-        if (guid == GuidAcDcPowerSource)
-        {
-            return value switch
-            {
-                0 => "ac",
-                1 => "battery",
-                2 => "short_term",
-                _ => value.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            };
-        }
-
-        if (guid == GuidConsoleDisplayState || guid == GuidSessionDisplayStatus)
-        {
-            return value switch
-            {
-                0 => "off",
-                1 => "on",
-                2 => "dimmed",
-                _ => value.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            };
-        }
-
-        if (guid == GuidGlobalUserPresence)
-        {
-            return value switch
-            {
-                0 => "present",
-                2 => "inactive",
-                _ => value.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            };
-        }
-
-        if (guid == GuidLidSwitchStateChange || guid == GuidMonitorPowerOn || guid == GuidPowerSavingStatus)
-        {
-            return value == 0 ? "off" : "on";
-        }
-
-        return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private void OnForegroundEvent(
