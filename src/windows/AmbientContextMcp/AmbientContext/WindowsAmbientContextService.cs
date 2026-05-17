@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using System.IO;
-using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text;
 using AmbientContextMcp.Core.Models;
@@ -44,6 +42,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     private readonly ILogger<WindowsAmbientContextService> _logger;
     private readonly string _snapshotPath;
     private readonly AmbientSnapshotWriter _snapshotWriter;
+    private readonly WindowsSystemContextCollector _systemCollector = new();
     private readonly List<AmbientEvent> _recentEvents = [];
     private readonly List<IntPtr> _powerNotificationHandles = [];
     private readonly WinEventProc _foregroundProc;
@@ -73,8 +72,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     private string _lastMediaPlaybackStatus = "";
     private string _lastTimeZoneId = "";
     private int _lastDisplayCount = -1;
-    private ulong? _lastSystemIdleTime;
-    private ulong? _lastSystemTotalTime;
     private bool _systemUnderLoadActive;
     private bool _contextSwitchBurstActive;
     private DateTimeOffset? _continuousActiveStartedAt;
@@ -207,13 +204,13 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     {
         var observedAt = DateTimeOffset.Now;
         var presence = GetPresence();
-        var foreground = GetForegroundApp();
-        var battery = GetBattery();
-        var network = GetNetwork();
+        var foreground = WindowsForegroundAppCollector.GetForegroundApp();
+        var battery = WindowsBatteryContextCollector.GetBattery();
+        var network = WindowsNetworkContextCollector.GetNetwork();
         var media = WindowsMediaContextCollector.GetMedia();
         var power = GetPower();
-        var system = GetSystem();
-        var systemLoad = GetSystemLoad();
+        var system = WindowsSystemContextCollector.GetSystem();
+        var systemLoad = _systemCollector.GetSystemLoad();
         var activity = GetActivity(observedAt);
         var wellness = GetWellness(presence, observedAt);
         var displays = GetDisplays();
@@ -441,100 +438,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         return (int)Math.Max(0, elapsedMilliseconds / 1000);
     }
 
-    private static ForegroundAppContext GetForegroundApp()
-    {
-        var hwnd = GetForegroundWindow();
-        if (hwnd == IntPtr.Zero)
-        {
-            return new ForegroundAppContext();
-        }
-
-        _ = GetWindowThreadProcessId(hwnd, out var processId);
-        var processName = GetProcessName(processId);
-        var executableName = string.IsNullOrWhiteSpace(processName) ? "" : processName + ".exe";
-        var app = AmbientTier1Rules.ClassifyApp(executableName);
-        var title = GetWindowTitle(hwnd);
-
-        return new ForegroundAppContext
-        {
-            ProcessId = processId == 0 ? null : (int)processId,
-            ProcessName = executableName,
-            AppName = app.AppName,
-            Category = app.Category,
-            HasWindowTitle = !string.IsNullOrWhiteSpace(title),
-            RawWindowTitle = title,
-            TitleSummary = AmbientTier1Rules.SummarizeWindowTitle(app.Category, title)
-        };
-    }
-
-    private static string GetProcessName(uint processId)
-    {
-        if (processId == 0)
-        {
-            return "";
-        }
-
-        try
-        {
-            using var process = Process.GetProcessById((int)processId);
-            return process.ProcessName;
-        }
-        catch
-        {
-            return "";
-        }
-    }
-
-    private static string GetWindowTitle(IntPtr hwnd)
-    {
-        var length = GetWindowTextLength(hwnd);
-        if (length <= 0)
-        {
-            return "";
-        }
-
-        var builder = new StringBuilder(Math.Min(length + 1, 1024));
-        _ = GetWindowText(hwnd, builder, builder.Capacity);
-        return builder.ToString();
-    }
-
-    private static BatteryContext GetBattery()
-    {
-        if (!GetSystemPowerStatus(out var status))
-        {
-            return new BatteryContext();
-        }
-
-        var percent = status.BatteryLifePercent == 255 ? null : (int?)status.BatteryLifePercent;
-        var onAcPower = status.AcLineStatus switch
-        {
-            0 => false,
-            1 => true,
-            _ => (bool?)null
-        };
-        var charging = status.BatteryFlag == 255
-            ? null
-            : (bool?)((status.BatteryFlag & 0x08) == 0x08);
-
-        return new BatteryContext
-        {
-            Present = percent is not null || status.BatteryFlag != 128,
-            Percent = percent,
-            OnAcPower = onAcPower,
-            Charging = charging,
-            BatterySaver = status.SystemStatusFlag == 1,
-            Bucket = AmbientTier1Rules.GetBatteryBucket(percent, charging)
-        };
-    }
-
-    private static NetworkContext GetNetwork()
-    {
-        return new NetworkContext
-        {
-            IsAvailable = NetworkInterface.GetIsNetworkAvailable()
-        };
-    }
-
     private PowerContext GetPower()
     {
         AmbientEvent? lastPowerEvent;
@@ -549,76 +452,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             LastKnownSettings = new Dictionary<string, string>(_lastPowerSettings, StringComparer.OrdinalIgnoreCase),
             LastPowerSettingEvent = lastPowerEvent
         };
-    }
-
-    private static SystemContext GetSystem()
-    {
-        var now = DateTimeOffset.Now;
-        return new SystemContext
-        {
-            TimeZoneId = TimeZoneInfo.Local.Id,
-            UtcOffsetMinutes = (int)TimeZoneInfo.Local.GetUtcOffset(now).TotalMinutes,
-            UptimeSeconds = Environment.TickCount64 / 1000,
-            Is64BitOperatingSystem = Environment.Is64BitOperatingSystem,
-            ProcessArchitecture = RuntimeInformation.ProcessArchitecture.ToString()
-        };
-    }
-
-    private SystemLoadContext GetSystemLoad()
-    {
-        var cpuUsagePercent = GetCpuUsagePercent();
-        var memoryUsedPercent = GetMemoryUsedPercent();
-
-        return new SystemLoadContext
-        {
-            CpuUsagePercent = cpuUsagePercent,
-            CpuPressureBucket = AmbientTier1Rules.GetCpuPressureBucket(cpuUsagePercent),
-            MemoryUsedPercent = memoryUsedPercent,
-            MemoryPressureBucket = AmbientTier1Rules.GetMemoryPressureBucket(memoryUsedPercent)
-        };
-    }
-
-    private int? GetCpuUsagePercent()
-    {
-        if (!GetSystemTimes(out var idle, out var kernel, out var user))
-        {
-            return null;
-        }
-
-        var idleTime = ToUInt64(idle);
-        var totalTime = ToUInt64(kernel) + ToUInt64(user);
-        if (_lastSystemIdleTime is not ulong lastIdleTime ||
-            _lastSystemTotalTime is not ulong lastTotalTime ||
-            totalTime <= lastTotalTime ||
-            idleTime < lastIdleTime)
-        {
-            _lastSystemIdleTime = idleTime;
-            _lastSystemTotalTime = totalTime;
-            return null;
-        }
-
-        var idleDelta = idleTime - lastIdleTime;
-        var totalDelta = totalTime - lastTotalTime;
-        _lastSystemIdleTime = idleTime;
-        _lastSystemTotalTime = totalTime;
-        if (totalDelta == 0)
-        {
-            return null;
-        }
-
-        var usage = 100.0 * (totalDelta - idleDelta) / totalDelta;
-        return (int)Math.Clamp(Math.Round(usage), 0, 100);
-    }
-
-    private static int? GetMemoryUsedPercent()
-    {
-        var status = new MemoryStatusEx
-        {
-            Length = (uint)Marshal.SizeOf<MemoryStatusEx>()
-        };
-        return GlobalMemoryStatusEx(ref status)
-            ? (int)Math.Clamp(status.MemoryLoad, 0, 100)
-            : null;
     }
 
     private ActivityContext GetActivity(DateTimeOffset observedAt)
@@ -884,8 +717,4 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         return Math.Max(0, (int)Math.Floor(value.TotalMinutes));
     }
 
-    private static ulong ToUInt64(FileTime value)
-    {
-        return ((ulong)value.HighDateTime << 32) | value.LowDateTime;
-    }
 }

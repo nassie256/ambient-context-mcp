@@ -204,7 +204,7 @@ public sealed class LocalContextHub
     {
         return new LocalContextEventSchemasResponse
         {
-            Events = EventSchemaCatalog.GetAll()
+            Events = AmbientContextCatalog.GetEventSchemas()
         };
     }
 

@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace AmbientContextMcp.Core.Models;
 
-public static class AmbientContextCatalog
+public static partial class AmbientContextCatalog
 {
     public static IReadOnlyList<PrivacyClassification> GetPrivacyClassifications()
     {
