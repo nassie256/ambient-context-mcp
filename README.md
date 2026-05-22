@@ -23,12 +23,13 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 - **MCP Streamable HTTP**: `http://127.0.0.1:37690/mcp` で公開、Bearer トークン必須
 - **プライバシー診断ツール**: `ambient_context_get_policy` で「なぜこの値が出力されないか」をクライアントから自己診断可能
 
-## 公開する 3 ツール
+## 公開する 4 ツール
 
 | ツール | 説明 |
 |---|---|
 | `ambient_context_get_states` | 現在のコンテキスト状態 (presence, battery, フォアグラウンドアプリ種別 等) |
 | `ambient_context_poll_events` | クライアント別カーソル以降の未読イベント (user_returned, ac_power_connected 等) |
+| `ambient_context_describe_events` | 全イベントの payload スキーマカタログ (sensitivity / 説明 / 例値、実データは含まない) |
 | `ambient_context_get_policy` | 機微度分類と有効送信可否の診断情報 (実データは含まない) |
 
 ## クイックスタート
