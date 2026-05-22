@@ -1,4 +1,5 @@
 using System.Windows.Forms;
+using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Mcp;
 using AmbientContextMcp.Resources;
 using Microsoft.Extensions.Hosting;
@@ -110,12 +111,14 @@ public sealed class TrayHost : IDisposable
     {
         if (e.Button == MouseButtons.Left)
         {
+            AppDiagnosticLog.Log("tray", "icon_left_click");
             _openSettings();
         }
     }
 
     private void OnSettingsClick(object? sender, EventArgs e)
     {
+        AppDiagnosticLog.Log("tray", "menu_settings_click");
         _openSettings();
     }
 

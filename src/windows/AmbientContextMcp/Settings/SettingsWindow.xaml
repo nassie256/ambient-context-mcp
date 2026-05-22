@@ -188,37 +188,46 @@
                   BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
                   BorderThickness="1">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <ItemsControl x:Name="TransmissionOptionsList" Margin="0,0,14,0">
+              <ItemsControl x:Name="TransmissionGroupsList" Margin="8,8,14,8">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
-                            BorderThickness="0,0,0,1"
-                            Padding="8,7">
-                      <Grid>
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="Auto" />
-                          <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="88" />
-                        </Grid.ColumnDefinitions>
-                        <CheckBox Grid.Column="0"
-                                  IsChecked="{Binding IsAllowed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  Click="OnTransmissionOptionClick"
-                                  VerticalAlignment="Center"
-                                  HorizontalAlignment="Left"
-                                  Margin="0,0,10,0" />
-                        <StackPanel Grid.Column="1" Margin="0,0,12,0">
-                          <TextBlock Text="{Binding Label}" />
-                          <TextBlock Text="{Binding Path}"
-                                     Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
-                                     FontSize="12" />
-                        </StackPanel>
-                        <TextBlock Grid.Column="2"
-                                   Text="{Binding Sensitivity}"
-                                   HorizontalAlignment="Right"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0" />
-                      </Grid>
-                    </Border>
+                    <GroupBox Header="{Binding Title}"
+                              Padding="8,10,8,6"
+                              Margin="0,0,0,10">
+                      <ItemsControl ItemsSource="{Binding Options}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border BorderBrush="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="4,7">
+                              <Grid>
+                                <Grid.ColumnDefinitions>
+                                  <ColumnDefinition Width="Auto" />
+                                  <ColumnDefinition Width="*" />
+                                  <ColumnDefinition Width="88" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0"
+                                          IsChecked="{Binding IsAllowed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Click="OnTransmissionOptionClick"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Left"
+                                          Margin="0,0,10,0" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Label}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Sensitivity}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0" />
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </GroupBox>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

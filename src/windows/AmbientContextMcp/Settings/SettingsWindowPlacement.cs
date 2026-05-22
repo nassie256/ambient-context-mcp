@@ -34,6 +34,15 @@ public static class SettingsWindowPlacement
         }
     }
 
+    /// <summary>
+    /// Brings an already-open settings window to the foreground without re-applying saved placement.
+    /// </summary>
+    public static void EnsureVisible(Window window)
+    {
+        window.WindowState = WindowState.Normal;
+        KeepOnScreen(window);
+    }
+
     public static void Save(Window window, ISettingsStore settingsStore)
     {
         if (window.WindowState == WindowState.Minimized)

@@ -1,6 +1,7 @@
 using System.Windows.Forms;
 using AmbientContextMcp.AmbientContext;
 using AmbientContextMcp.Autostart;
+using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Core.Hub;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Mcp;
@@ -96,6 +97,8 @@ public sealed class TrayHostedService : IHostedService
                 ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown
             };
 
+            AppDiagnosticLog.Log("tray", "thread_started");
+
             _tray = new TrayHost(_mcpHost, _lifetime, OpenSettings);
             _ready.Set();
             Application.Run();
@@ -103,32 +106,59 @@ public sealed class TrayHostedService : IHostedService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Tray thread crashed.");
+            AppDiagnosticLog.LogException("tray", "thread_crashed", ex);
             _ready.Set();
             _lifetime.StopApplication();
         }
         finally
         {
+            AppDiagnosticLog.Log("tray", "thread_exiting");
             _tray?.Dispose();
         }
     }
 
     private void OpenSettings()
     {
-        if (_settingsWindow is { IsVisible: true })
+        AppDiagnosticLog.Log("tray", "open_settings_requested", new Dictionary<string, object?>
         {
-            _settingsWindow.Activate();
-            return;
-        }
+            ["existingWindow"] = _settingsWindow is not null,
+            ["existingVisible"] = _settingsWindow?.IsVisible == true
+        });
 
-        var window = new SettingsWindow(_settingsStore, _mcpHost, _hub, _collector, _autostart);
-        window.Closed += (_, _) =>
+        try
         {
-            if (ReferenceEquals(_settingsWindow, window))
+            if (_settingsWindow is { IsVisible: true })
             {
-                _settingsWindow = null;
+                SettingsWindowPlacement.EnsureVisible(_settingsWindow);
+                _settingsWindow.Activate();
+                AppDiagnosticLog.Log("tray", "open_settings_activated_existing");
+                return;
             }
-        };
-        _settingsWindow = window;
-        window.Show();
+
+            var window = new SettingsWindow(_settingsStore, _mcpHost, _hub, _collector, _autostart);
+            window.Closed += (_, _) =>
+            {
+                if (ReferenceEquals(_settingsWindow, window))
+                {
+                    _settingsWindow = null;
+                }
+
+                AppDiagnosticLog.Log("tray", "settings_window_closed");
+            };
+            _settingsWindow = window;
+            window.Show();
+            AppDiagnosticLog.Log("tray", "open_settings_show_new", new Dictionary<string, object?>
+            {
+                ["left"] = window.Left,
+                ["top"] = window.Top,
+                ["width"] = window.Width,
+                ["height"] = window.Height
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open settings window.");
+            AppDiagnosticLog.LogException("tray", "open_settings_failed", ex);
+        }
     }
 }

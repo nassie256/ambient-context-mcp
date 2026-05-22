@@ -174,38 +174,111 @@ public static class Strings
         "起動中 :{0}",
         "Running :{0}");
 
-    // ----- Transmission options (SettingsWindow.xaml.cs CreateTransmissionOptions) -----
+    // ----- Transmission option groups (SettingsWindow transmission tab) -----
+    public static string TxGroupForegroundApp { get; } = T(
+        "フォアグラウンドアプリ",
+        "Foreground app");
+
+    public static string TxGroupActivity { get; } = T(
+        "作業リズム",
+        "Work rhythm");
+
+    public static string TxGroupMedia { get; } = T(
+        "メディア",
+        "Media");
+
+    public static string TxGroupEnvironment { get; } = T(
+        "環境",
+        "Environment");
+
+    public static string TxUiForegroundIdentity { get; } = T(
+        "作業カテゴリ・名前・プロセス名（現在値 + 切替通知）",
+        "Work category, name, and process (current value + switch notifications)");
+
+    public static string TxUiForegroundTitleSummary { get; } = T(
+        "タイトル要約（現在値 + 変更履歴）",
+        "Title summary (current value + change history)");
+
+    public static string TxUiForegroundRawTitle { get; } = T(
+        "タイトル原文（現在値 + 変更履歴）",
+        "Raw title (current value + change history)");
+
+    public static string TxUiActivitySwitchRate { get; } = T(
+        "切替頻度（現在値）",
+        "Switch rate (current value)");
+
+    public static string TxUiActivitySwitchBurst { get; } = T(
+        "切替急増（通知）",
+        "Switch burst (notification)");
+
+    public static string TxUiMediaOverview { get; } = T(
+        "再生の有無・状態・再生元（現在値 + 再生通知）",
+        "Playback presence, status, and source (current value + playback notifications)");
+
+    public static string TxUiMediaTitle { get; } = T(
+        "タイトル（現在値 + 変更履歴）",
+        "Title (current value + change history)");
+
+    public static string TxUiMediaArtist { get; } = T(
+        "アーティスト（現在値 + 変更履歴）",
+        "Artist (current value + change history)");
+
+    public static string TxUiMediaAlbum { get; } = T(
+        "アルバム（現在値 + 変更履歴）",
+        "Album (current value + change history)");
+
+    public static string TxUiEnvironmentTimezone { get; } = T(
+        "タイムゾーン（現在値 + 変更通知）",
+        "Time zone (current value + change notifications)");
+
+    public static string TxUiEnvironmentDisplays { get; } = T(
+        "ディスプレイ構成（現在値 + 変更通知）",
+        "Display layout (current value + change notifications)");
+
+    // ----- Transmission options (legacy per-path labels; kept for reference) -----
     public static string TxOptForegroundCategory { get; } = T(
-        "作業カテゴリ",
-        "Work category");
+        "フォアグラウンドアプリの作業カテゴリ",
+        "Foreground app work category");
 
     public static string TxOptForegroundAppName { get; } = T(
-        "アプリ名",
-        "App name");
+        "フォアグラウンドアプリ名",
+        "Foreground app name");
 
     public static string TxOptForegroundProcessName { get; } = T(
-        "プロセス名",
-        "Process name");
+        "フォアグラウンドアプリのプロセス名",
+        "Foreground app process name");
 
     public static string TxOptForegroundTitleSummary { get; } = T(
-        "ウィンドウタイトル要約",
-        "Window title summary");
+        "フォアグラウンドウィンドウのタイトル要約",
+        "Foreground window title summary");
 
     public static string TxOptForegroundRawWindowTitle { get; } = T(
-        "ウィンドウタイトル原文",
-        "Raw window title");
+        "フォアグラウンドウィンドウのタイトル原文",
+        "Foreground window raw title");
 
     public static string TxOptEventForegroundChanged { get; } = T(
-        "フォアグラウンド切替イベント (アプリ名・プロセス名込み)",
-        "Foreground switch event (includes app and process name)");
+        "フォアグラウンドアプリ切替イベント (アプリ名・プロセス名込み)",
+        "Foreground app switch event (includes app and process name)");
+
+    public static string TxOptEventForegroundTitleChanged { get; } = T(
+        "フォアグラウンドウィンドウのタイトル変更イベント (アプリ文脈込み)",
+        "Foreground window title change event (includes app context)");
+
+    public static string TxOptEventForegroundTitleChangedSummary { get; } = T(
+        "フォアグラウンドウィンドウのタイトル変更イベント: 要約",
+        "Foreground window title change event: summary");
+
+    public static string TxOptEventForegroundTitleChangedRaw { get; } = T(
+        "フォアグラウンドウィンドウのタイトル変更イベント: 原文",
+        "Foreground window title change event: raw title");
 
     public static string TxOptActivityContextSwitches { get; } = T(
-        "アプリ切替頻度",
-        "App switch rate");
+        "フォアグラウンドアプリ切替頻度",
+        "Foreground app switch rate");
 
     public static string TxOptEventContextSwitchBurst { get; } = T(
-        "アプリ切替増加イベント",
-        "App switch burst event");
+        "フォアグラウンドアプリ切替増加イベント",
+        "Foreground app switch burst event");
 
     public static string TxOptMediaIsAvailable { get; } = T(
         "メディアセッション有無",
@@ -250,6 +323,10 @@ public static class Strings
     public static string TxOptEventMediaSessionChangedArtist { get; } = T(
         "メディアセッション変更イベント: アーティスト",
         "Media session changed: artist");
+
+    public static string TxOptEventMediaSessionChangedAlbumTitle { get; } = T(
+        "メディアセッション変更イベント: アルバム",
+        "Media session changed: album");
 
     public static string TxOptSystemTimeZone { get; } = T(
         "タイムゾーン",

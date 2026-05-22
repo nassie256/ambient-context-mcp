@@ -6,7 +6,9 @@ using AmbientContextMcp.AmbientContext;
 using ComboBox = System.Windows.Controls.ComboBox;
 using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using AmbientContextMcp.Autostart;
+using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Core.Hub;
+using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Policy;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Mcp;
@@ -21,6 +23,7 @@ public partial class SettingsWindow : Window
     private readonly LocalContextHub _hub;
     private readonly WindowsAmbientContextService _collector;
     private readonly AutostartManager _autostart;
+    private readonly List<TransmissionGroupViewModel> _transmissionGroups;
     private readonly List<TransmissionOptionViewModel> _transmissionOptions;
 
     public SettingsWindow(
@@ -36,8 +39,9 @@ public partial class SettingsWindow : Window
         _hub = hub;
         _collector = collector;
         _autostart = autostart;
-        _transmissionOptions = TransmissionOptionViewModel.CreateAll();
-        TransmissionOptionsList.ItemsSource = _transmissionOptions;
+        _transmissionGroups = TransmissionGroupViewModel.CreateAll();
+        _transmissionOptions = _transmissionGroups.SelectMany(group => group.Options).ToList();
+        TransmissionGroupsList.ItemsSource = _transmissionGroups;
 
         LoadTransmissionSettings();
         LoadLocalContextSettings();
@@ -49,12 +53,14 @@ public partial class SettingsWindow : Window
         RefreshMcpStatus();
 
         SourceInitialized += (_, _) => SettingsWindowPlacement.Restore(this, _settingsStore);
+        AppDiagnosticLog.Log("settings", "window_created");
     }
 
     private string _initialLanguage = "";
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        AppDiagnosticLog.Log("settings", "window_closing");
         SettingsWindowPlacement.Save(this, _settingsStore);
         base.OnClosing(e);
     }
@@ -77,6 +83,9 @@ public partial class SettingsWindow : Window
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
+        AppDiagnosticLog.Log("settings", "save_begin");
+        var saveStartedAt = Environment.TickCount64;
+
         SaveMcpSettings();
         SaveTransmissionSettings();
         SaveLocalContextSettings();
@@ -90,6 +99,12 @@ public partial class SettingsWindow : Window
         var languageChanged = !string.Equals(GetSelectedLanguage(), _initialLanguage, StringComparison.OrdinalIgnoreCase);
         SettingsStatusText.Text = languageChanged ? Strings.StatusSavedNeedsRestart : Strings.StatusSaved;
         RefreshMcpStatus();
+
+        AppDiagnosticLog.Log("settings", "save_end", new Dictionary<string, object?>
+        {
+            ["durationMs"] = Environment.TickCount64 - saveStartedAt,
+            ["languageChanged"] = languageChanged
+        });
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
@@ -154,7 +169,9 @@ public partial class SettingsWindow : Window
         var settings = _settingsStore.LoadAmbientTransmissionSettings();
         foreach (var option in _transmissionOptions)
         {
-            option.IsAllowed = settings.PathTransmitOverrides.TryGetValue(option.Path, out var allowed) && allowed;
+            option.IsAllowed = TransmissionUiSettingsMerge.IsOptionEnabled(
+                option.PrimaryPath,
+                settings.PathTransmitOverrides);
         }
     }
 
@@ -167,21 +184,17 @@ public partial class SettingsWindow : Window
     private void SaveTransmissionSettings()
     {
         var settings = _settingsStore.LoadAmbientTransmissionSettings();
-        var overrides = new Dictionary<string, bool>(
+        var enabledOptionIds = _transmissionOptions
+            .Where(option => option.IsAllowed)
+            .Select(option => option.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var catalogOptions = AmbientContextCatalog.GetTransmissionUiGroups()
+            .SelectMany(group => group.Options)
+            .ToList();
+        var overrides = TransmissionUiSettingsMerge.MergeOverrides(
             settings.PathTransmitOverrides,
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var option in _transmissionOptions)
-        {
-            if (option.IsAllowed)
-            {
-                overrides[option.Path] = true;
-            }
-            else
-            {
-                overrides.Remove(option.Path);
-            }
-        }
+            catalogOptions,
+            enabledOptionIds);
 
         AmbientTransmissionPolicy.Save(
             _settingsStore,
