@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Policy;
 using AmbientContextMcp.Core.Settings;
@@ -63,6 +64,9 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     private string _lastForegroundCategory = "";
     private string _lastForegroundProcessName = "";
     private bool _foregroundCategoryInitialized;
+    private string _lastForegroundRawWindowTitle = "";
+    private string _lastForegroundTitleSummaryKey = "";
+    private bool _foregroundTitleInitialized;
     private string _lastBatteryBucket = "unknown";
     private int? _lastBatteryPercent;
     private bool? _lastCharging;
@@ -150,7 +154,9 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         _transmissionPolicy = AmbientTransmissionPolicy.Load(_settingsStore, GetPrivacyClassificationsForUi());
         if (_started)
         {
-            CaptureAndStore("transmission_policy_reloaded");
+            // Capture must run on the message-window thread (same as hooks / timer).
+            // Calling Capture() from the tray/WPF thread blocked the UI for seconds (media API waits).
+            _messageWindow.PostCallback(() => CaptureAndStore("transmission_policy_reloaded"));
         }
     }
 
@@ -234,6 +240,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
 
         EvaluatePresenceTransitions(presence);
         EvaluateForegroundTransitions(foreground);
+        EvaluateForegroundTitleTransitions(foreground);
         EvaluateBatteryTransitions(snapshot);
         EvaluateMediaTransitions(media);
         EvaluateNetworkTransitions(network);
@@ -372,15 +379,38 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             return;
         }
 
+        var startedAt = Environment.TickCount64;
+
         try
         {
             LatestSnapshot = Capture();
             _snapshotWriter.Write(LatestSnapshot);
             SnapshotUpdated?.Invoke(this, LatestSnapshot);
+
+            var durationMs = Environment.TickCount64 - startedAt;
+            if (durationMs >= 2000)
+            {
+                AppDiagnosticLog.Log("capture", "slow", new Dictionary<string, object?>
+                {
+                    ["reason"] = reason,
+                    ["durationMs"] = durationMs,
+                    ["outboundEvents"] = LatestSnapshot.OutboundEvents.Count
+                });
+
+                _logger.LogWarning(
+                    "Slow ambient context capture ({DurationMs} ms) for reason {Reason}",
+                    durationMs,
+                    reason);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Ambient context capture failed for reason {Reason}", reason);
+            AppDiagnosticLog.LogException("capture", "failed", ex, new Dictionary<string, object?>
+            {
+                ["reason"] = reason,
+                ["durationMs"] = Environment.TickCount64 - startedAt
+            });
         }
     }
 

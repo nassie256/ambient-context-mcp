@@ -13,6 +13,7 @@ public class AmbientContextCatalogEventSchemasTests
         var names = all.Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         Assert.Contains("foreground_changed", names);
+        Assert.Contains("foreground_title_changed", names);
         Assert.Contains("media_session_changed", names);
         Assert.Contains("first_activity_today", names);
         Assert.Contains("session_locked", names);
@@ -28,6 +29,20 @@ public class AmbientContextCatalogEventSchemasTests
         var distinct = names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         Assert.Equal(distinct.Count, names.Count);
+    }
+
+    [Fact]
+    public void Foreground_title_changed_marks_raw_window_title_as_high()
+    {
+        var schema = AmbientContextCatalog.GetEventSchemas()
+            .Single(s => s.Name == "foreground_title_changed");
+
+        Assert.Equal("medium", schema.Sensitivity);
+
+        var rawTitle = schema.PayloadKeys.Single(p => p.Key == "raw_window_title");
+        var summary = schema.PayloadKeys.Single(p => p.Key == "titleSummary.file_ext");
+        Assert.Equal("high", rawTitle.Sensitivity);
+        Assert.Equal("medium", summary.Sensitivity);
     }
 
     [Fact]
@@ -102,9 +117,13 @@ public class AmbientContextCatalogEventSchemasTests
             .Select(item => item.Path)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var option in AmbientContextCatalog.GetTransmissionOptions())
+        foreach (var option in AmbientContextCatalog.GetTransmissionUiGroups()
+            .SelectMany(group => group.Options))
         {
-            Assert.Contains(option.Path, classifications);
+            foreach (var path in option.LinkedPaths)
+            {
+                Assert.Contains(path, classifications);
+            }
         }
     }
 }
