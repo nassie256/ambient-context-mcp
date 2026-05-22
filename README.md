@@ -27,7 +27,7 @@ Windows のローカル ambient context (在席状態、フォアグラウンド
 
 | ツール | 説明 |
 |---|---|
-| `ambient_context_get_states` | 現在のコンテキスト状態 (presence, battery, foreground app category 等) |
+| `ambient_context_get_states` | 現在のコンテキスト状態 (presence, battery, フォアグラウンドアプリ種別 等) |
 | `ambient_context_poll_events` | クライアント別カーソル以降の未読イベント (user_returned, ac_power_connected 等) |
 | `ambient_context_get_policy` | 機微度分類と有効送信可否の診断情報 (実データは含まない) |
 

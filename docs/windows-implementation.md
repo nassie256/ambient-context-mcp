@@ -11,7 +11,7 @@
 | `GlobalMemoryStatusEx` | メモリ使用率 |
 | `WTSRegisterSessionNotification` | ロック/アンロック検知 |
 | `RegisterPowerSettingNotification` | 電源・画面・lid 状態の遷移 |
-| `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` | フォアグラウンド切替 |
+| `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` | フォアグラウンドアプリ切替 |
 | `EnumDisplayMonitors` / `GetMonitorInfo` | ディスプレイ構成 |
 | `NetworkInterface.GetIsNetworkAvailable` (.NET) | オンライン/オフライン |
 | `Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager` (WinRT) | メディアセッション情報 (タイトル、アーティスト等) |
