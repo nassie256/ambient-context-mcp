@@ -10,20 +10,31 @@ public static class WindowsMediaContextCollector
     // 短い timeout でタスクが返らなければ「media 不明」として続行する。
     private static readonly TimeSpan MediaApiTimeout = TimeSpan.FromMilliseconds(1500);
 
-    public static MediaContext GetMedia()
+    public static async Task<MediaContext> GetMediaAsync()
     {
         try
         {
-            var requestTask = GlobalSystemMediaTransportControlsSessionManager.RequestAsync().AsTask();
-            if (!requestTask.Wait(MediaApiTimeout))
+            GlobalSystemMediaTransportControlsSessionManager manager;
+            try
+            {
+                manager = await GlobalSystemMediaTransportControlsSessionManager
+                    .RequestAsync()
+                    .AsTask()
+                    .WaitAsync(MediaApiTimeout)
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
             {
                 return new MediaContext { Error = "GetMedia.RequestAsync timed out" };
             }
 
-            var manager = requestTask.Result;
-            var allSessions = manager.GetSessions()
-                .Select(ToMediaSessionContext)
-                .ToList();
+            var rawSessions = manager.GetSessions().ToList();
+            var allSessions = new List<MediaSessionContext>(rawSessions.Count);
+            foreach (var rawSession in rawSessions)
+            {
+                allSessions.Add(await ToMediaSessionContextAsync(rawSession).ConfigureAwait(false));
+            }
+
             var currentSession = manager.GetCurrentSession();
             var currentSource = currentSession?.SourceAppUserModelId ?? "";
             var selectedSession = allSessions.FirstOrDefault(item => item.IsPlaying)
@@ -43,8 +54,15 @@ public static class WindowsMediaContextCollector
             var playbackInfo = session.GetPlaybackInfo();
             var playbackStatus = playbackInfo.PlaybackStatus.ToString();
             var timeline = session.GetTimelineProperties();
-            var propsTask = session.TryGetMediaPropertiesAsync().AsTask();
-            if (!propsTask.Wait(MediaApiTimeout))
+            GlobalSystemMediaTransportControlsSessionMediaProperties mediaProperties;
+            try
+            {
+                mediaProperties = await session.TryGetMediaPropertiesAsync()
+                    .AsTask()
+                    .WaitAsync(MediaApiTimeout)
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
             {
                 return new MediaContext
                 {
@@ -61,7 +79,6 @@ public static class WindowsMediaContextCollector
                 };
             }
 
-            var mediaProperties = propsTask.Result;
             return new MediaContext
             {
                 IsAvailable = true,
@@ -98,15 +115,22 @@ public static class WindowsMediaContextCollector
             .FirstOrDefault(item => item.SourceAppUserModelId.Equals(sourceAppUserModelId, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static MediaSessionContext ToMediaSessionContext(GlobalSystemMediaTransportControlsSession session)
+    private static async Task<MediaSessionContext> ToMediaSessionContextAsync(GlobalSystemMediaTransportControlsSession session)
     {
         try
         {
             var playbackInfo = session.GetPlaybackInfo();
             var playbackStatus = playbackInfo.PlaybackStatus.ToString();
             var timeline = session.GetTimelineProperties();
-            var propsTask = session.TryGetMediaPropertiesAsync().AsTask();
-            if (!propsTask.Wait(MediaApiTimeout))
+            GlobalSystemMediaTransportControlsSessionMediaProperties mediaProperties;
+            try
+            {
+                mediaProperties = await session.TryGetMediaPropertiesAsync()
+                    .AsTask()
+                    .WaitAsync(MediaApiTimeout)
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
             {
                 return new MediaSessionContext
                 {
@@ -119,7 +143,6 @@ public static class WindowsMediaContextCollector
                 };
             }
 
-            var mediaProperties = propsTask.Result;
             return new MediaSessionContext
             {
                 SourceAppUserModelId = session.SourceAppUserModelId,

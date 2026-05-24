@@ -1,6 +1,5 @@
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Policy;
@@ -48,6 +47,11 @@ public sealed partial class WindowsAmbientContextService : IDisposable
     private readonly List<IntPtr> _powerNotificationHandles = [];
     private readonly WinEventProc _foregroundProc;
     private readonly object _eventLock = new();
+    // CaptureAndStoreAsync を直列化する。await GetMediaAsync で pump が解放されるため
+    // 同時 capture が走り得るが、それを許すと完了順次第で snapshot 順序が逆転 (古い
+    // observedAt が後勝ち上書き) し、Evaluate*Transitions が誤った差分判定をする。
+    // 元の同期版では window pump が直列実行を保証していたため、その不変条件を保つ。
+    private readonly SemaphoreSlim _captureGate = new(1, 1);
     private readonly Dictionary<string, string> _lastPowerSettings = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<DateTimeOffset> _foregroundSwitchTimes = [];
     private AmbientTransmissionPolicy _transmissionPolicy;
@@ -126,7 +130,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         _messageWindow.PostCallback(() =>
         {
             RegisterWindowMonitors();
-            CaptureAndStore("startup");
+            _ = CaptureAndStoreAsync("startup");
         });
     }
 
@@ -141,7 +145,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             return;
         }
 
-        _messageWindow.PostCallback(() => CaptureAndStore("timer"));
+        _messageWindow.PostCallback(() => _ = CaptureAndStoreAsync("timer"));
     }
 
     private void OnMessageReceived(object? sender, WindowMessageEventArgs e)
@@ -156,7 +160,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         {
             // Capture must run on the message-window thread (same as hooks / timer).
             // Calling Capture() from the tray/WPF thread blocked the UI for seconds (media API waits).
-            _messageWindow.PostCallback(() => CaptureAndStore("transmission_policy_reloaded"));
+            _messageWindow.PostCallback(() => _ = CaptureAndStoreAsync("transmission_policy_reloaded"));
         }
     }
 
@@ -206,14 +210,18 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         }
     }
 
-    public AmbientContextSnapshot Capture()
+    public async Task<AmbientContextSnapshot> CaptureAsync()
     {
         var observedAt = DateTimeOffset.Now;
         var presence = GetPresence();
         var foreground = WindowsForegroundAppCollector.GetForegroundApp();
         var battery = WindowsBatteryContextCollector.GetBattery();
         var network = WindowsNetworkContextCollector.GetNetwork();
-        var media = WindowsMediaContextCollector.GetMedia();
+        // WinRT MediaTransportControls API は呼び出し相手の media app プロセスを経由するため
+        // 同期的に Wait すると message-window スレッドが最大 1500ms × (1 + sessions) 占有され、
+        // hook (foreground / WTS / power) 配送が遅延する。await + ConfigureAwait(true) で
+        // 待機中は pump を解放し、SyncContext 経由で window スレッドに復帰して Evaluate* を実行する。
+        var media = await WindowsMediaContextCollector.GetMediaAsync().ConfigureAwait(true);
         var power = GetPower();
         var system = WindowsSystemContextCollector.GetSystem();
         var systemLoad = _systemCollector.GetSystemLoad();
@@ -285,50 +293,6 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         return ApplyTransmissionPolicy(outboundSnapshot);
     }
 
-    public string FormatSummary()
-    {
-        var snapshot = LatestSnapshot.ObservedAt == default ? Capture() : LatestSnapshot;
-        var builder = new StringBuilder();
-
-        builder.AppendLine($"observed_at: {snapshot.ObservedAt:yyyy-MM-dd HH:mm:ss zzz}");
-        builder.AppendLine("source: outboundStates (MCP-visible)");
-        builder.AppendLine($"states: {snapshot.OutboundStates.Count}/{snapshot.States.Count}");
-        builder.AppendLine($"events: {snapshot.OutboundEvents.Count}/{snapshot.Events.Count}");
-        builder.AppendLine($"transmission_settings: {snapshot.TransmissionPolicy.SettingsPath}");
-        builder.AppendLine($"snapshot_file: {_snapshotPath}");
-        builder.AppendLine();
-
-        builder.AppendLine("[states]");
-        if (snapshot.OutboundStates.Count == 0)
-        {
-            builder.AppendLine("(none)");
-        }
-        else
-        {
-            foreach (var state in snapshot.OutboundStates.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                builder.AppendLine($"{state.Name}: {state.Value} ({state.Sensitivity})");
-            }
-        }
-
-        builder.AppendLine();
-        builder.AppendLine("[events]");
-        if (snapshot.OutboundEvents.Count == 0)
-        {
-            builder.AppendLine("(none)");
-        }
-        else
-        {
-            foreach (var outboundEvent in snapshot.OutboundEvents.OrderBy(item => item.ObservedAt))
-            {
-                builder.AppendLine(
-                    $"{outboundEvent.ObservedAt:yyyy-MM-dd HH:mm:ss zzz} {outboundEvent.Name}: {outboundEvent.Value} ({outboundEvent.Sensitivity})");
-            }
-        }
-
-        return builder.ToString().TrimEnd();
-    }
-
     public void Dispose()
     {
         if (_disposed)
@@ -372,45 +336,63 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         done.Wait(TimeSpan.FromSeconds(2));
     }
 
-    private void CaptureAndStore(string reason)
+    private async Task CaptureAndStoreAsync(string reason)
     {
-        if (!_started)
+        if (!_started || _disposed)
         {
             return;
         }
 
-        var startedAt = Environment.TickCount64;
-
+        // 同時 in-flight を防ぎ、起動順 = 完了順 = LatestSnapshot 反映順を保証する。
+        await _captureGate.WaitAsync().ConfigureAwait(true);
         try
         {
-            LatestSnapshot = Capture();
-            _snapshotWriter.Write(LatestSnapshot);
-            SnapshotUpdated?.Invoke(this, LatestSnapshot);
-
-            var durationMs = Environment.TickCount64 - startedAt;
-            if (durationMs >= 2000)
+            if (_disposed)
             {
-                AppDiagnosticLog.Log("capture", "slow", new Dictionary<string, object?>
+                return;
+            }
+
+            var startedAt = Environment.TickCount64;
+            try
+            {
+                var snapshot = await CaptureAsync().ConfigureAwait(true);
+                if (_disposed)
+                {
+                    return;
+                }
+                LatestSnapshot = snapshot;
+                _snapshotWriter.Write(snapshot);
+                SnapshotUpdated?.Invoke(this, snapshot);
+
+                var durationMs = Environment.TickCount64 - startedAt;
+                if (durationMs >= 2000)
+                {
+                    AppDiagnosticLog.Log("capture", "slow", new Dictionary<string, object?>
+                    {
+                        ["reason"] = reason,
+                        ["durationMs"] = durationMs,
+                        ["outboundEvents"] = snapshot.OutboundEvents.Count
+                    });
+
+                    _logger.LogWarning(
+                        "Slow ambient context capture ({DurationMs} ms) for reason {Reason}",
+                        durationMs,
+                        reason);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Ambient context capture failed for reason {Reason}", reason);
+                AppDiagnosticLog.LogException("capture", "failed", ex, new Dictionary<string, object?>
                 {
                     ["reason"] = reason,
-                    ["durationMs"] = durationMs,
-                    ["outboundEvents"] = LatestSnapshot.OutboundEvents.Count
+                    ["durationMs"] = Environment.TickCount64 - startedAt
                 });
-
-                _logger.LogWarning(
-                    "Slow ambient context capture ({DurationMs} ms) for reason {Reason}",
-                    durationMs,
-                    reason);
             }
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogWarning(ex, "Ambient context capture failed for reason {Reason}", reason);
-            AppDiagnosticLog.LogException("capture", "failed", ex, new Dictionary<string, object?>
-            {
-                ["reason"] = reason,
-                ["durationMs"] = Environment.TickCount64 - startedAt
-            });
+            _captureGate.Release();
         }
     }
 
@@ -533,20 +515,20 @@ public sealed partial class WindowsAmbientContextService : IDisposable
             case WtsSessionLock:
                 _sessionLocked = true;
                 AddEvent("session_locked");
-                CaptureAndStore("session_locked");
+                _ = CaptureAndStoreAsync("session_locked");
                 break;
             case WtsSessionUnlock:
                 _sessionLocked = false;
                 AddEvent("session_unlocked");
-                CaptureAndStore("session_unlocked");
+                _ = CaptureAndStoreAsync("session_unlocked");
                 break;
             case WtsSessionLogon:
                 AddEvent("session_logon");
-                CaptureAndStore("session_logon");
+                _ = CaptureAndStoreAsync("session_logon");
                 break;
             case WtsSessionLogoff:
                 AddEvent("session_logoff");
-                CaptureAndStore("session_logoff");
+                _ = CaptureAndStoreAsync("session_logoff");
                 break;
         }
     }
@@ -562,7 +544,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
                 if (!_powerSettingsInitialized)
                 {
                     InitializePowerSetting(setting, value);
-                    CaptureAndStore("power_setting_initialized");
+                    _ = CaptureAndStoreAsync("power_setting_initialized");
                     return;
                 }
 
@@ -576,7 +558,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
                 _lastPowerSettings[setting] = value;
             }
 
-            CaptureAndStore("power_setting_changed");
+            _ = CaptureAndStoreAsync("power_setting_changed");
             return;
         }
 
@@ -591,7 +573,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         if (!string.IsNullOrWhiteSpace(kind))
         {
             AddEvent(kind);
-            CaptureAndStore(kind);
+            _ = CaptureAndStoreAsync(kind);
         }
     }
 
@@ -685,7 +667,7 @@ public sealed partial class WindowsAmbientContextService : IDisposable
         // foreground_changed は EvaluateForegroundTransitions が唯一の emit 点。
         // ここでは hook 由来であることを reason に載せた CaptureAndStore だけ呼び、
         // スナップショット tick 内の状態比較に最終決定を委ねる (重複 emit を回避するため)。
-        CaptureAndStore("foreground_changed");
+        _ = CaptureAndStoreAsync("foreground_changed");
     }
 
     private void AddEvent(
