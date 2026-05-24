@@ -9,6 +9,20 @@
     <AssemblyName>ambient-mcp</AssemblyName>
     <RootNamespace>AmbientContextMcp</RootNamespace>
     <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!--
+      manifest 側で PerMonitorV2 を宣言する理由: ApplicationConfiguration.Initialize() は
+      tray STA スレッド起動後にしか走らないため、それより前に MessageOnlyWindow が
+      CreateWindowEx で HWND を作ったり、startup capture が EnumDisplayMonitors を
+      呼んだ時点で DPI awareness が定まっていないと、起動ごとに 2560x1440 / 3840x2160 が
+      ぶれる。manifest なら Windows がプロセスロード時に確定させる。
+      ApplicationHighDpiMode は WinForms 内部の Application.HighDpiMode を PerMonitorV2 と
+      認識させ、スケーリング判定を manifest 宣言と一致させるために併用する。
+      WFAC010: WinForms は manifest と ApplicationHighDpiMode の同時使用に警告するが、
+      上記理由で両方必要なので抑止する。
+    -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

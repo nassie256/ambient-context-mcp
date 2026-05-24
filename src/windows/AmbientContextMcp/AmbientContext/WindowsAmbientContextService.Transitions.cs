@@ -36,7 +36,7 @@ public sealed partial class WindowsAmbientContextService
     }
 
     /// <summary>
-    /// 前景アプリの状態遷移を検出し、変化していれば <c>foreground_changed</c> を発火する唯一の emit 点。
+    /// フォアグラウンドアプリの状態遷移を検出し、変化していれば <c>foreground_changed</c> を発火する唯一の emit 点。
     /// process_name または category が直近 emit と異なるときに発火し、ペイロードに
     /// <c>category_changed</c> フラグ ("true" / "false") を含める。
     /// 旧 <c>foreground_app_category_changed</c> はこのフラグに統合され、別イベントとしては発火しない。
@@ -70,6 +70,70 @@ public sealed partial class WindowsAmbientContextService
 
         _lastForegroundCategory = foreground.Category;
         _lastForegroundProcessName = foreground.ProcessName;
+    }
+
+    /// <summary>
+    /// フォアグラウンドウィンドウのタイトル (原文 / 要約) が直近 emit と変わった瞬間に
+    /// <c>foreground_title_changed</c> を発火する。process / category が同じまま
+    /// 同一フォアグラウンドアプリ内のタブやファイル切替だけ起きたケースもここで履歴に残る。
+    /// 高機微な <c>raw_window_title</c> は payload キー単位の opt-in でフィルタされる。
+    /// </summary>
+    private void EvaluateForegroundTitleTransitions(ForegroundAppContext foreground)
+    {
+        var rawTitle = foreground.RawWindowTitle;
+        var summaryKey = SerializeTitleSummary(foreground.TitleSummary);
+
+        if (!_foregroundTitleInitialized)
+        {
+            _lastForegroundRawWindowTitle = rawTitle;
+            _lastForegroundTitleSummaryKey = summaryKey;
+            _foregroundTitleInitialized = true;
+            return;
+        }
+
+        if (rawTitle.Equals(_lastForegroundRawWindowTitle, StringComparison.Ordinal) &&
+            summaryKey.Equals(_lastForegroundTitleSummaryKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["category"] = foreground.Category,
+            ["app_name"] = foreground.AppName,
+            ["process_name"] = foreground.ProcessName,
+            ["raw_window_title"] = rawTitle
+        };
+        AppendTitleSummaryPayload(data, foreground.TitleSummary);
+
+        AddEvent("foreground_title_changed", data, "medium");
+
+        _lastForegroundRawWindowTitle = rawTitle;
+        _lastForegroundTitleSummaryKey = summaryKey;
+    }
+
+    private static string SerializeTitleSummary(IReadOnlyDictionary<string, string> summary)
+    {
+        if (summary.Count == 0)
+        {
+            return "";
+        }
+
+        return string.Join(
+            "|",
+            summary
+                .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(item => item.Key + "=" + item.Value));
+    }
+
+    private static void AppendTitleSummaryPayload(
+        Dictionary<string, string> data,
+        IReadOnlyDictionary<string, string> summary)
+    {
+        foreach (var item in summary)
+        {
+            data["titleSummary." + item.Key] = item.Value;
+        }
     }
 
     private void EvaluateBatteryTransitions(AmbientContextSnapshot snapshot)
@@ -158,7 +222,7 @@ public sealed partial class WindowsAmbientContextService
         _lastMediaPlaybackStatus = media.PlaybackStatus;
 
         var key = media.IsAvailable
-            ? string.Join("|", media.SourceAppUserModelId, media.PlaybackStatus, media.Title, media.Artist)
+            ? string.Join("|", media.SourceAppUserModelId, media.PlaybackStatus, media.Title, media.Artist, media.AlbumTitle)
             : "";
 
         if (key == _lastMediaKey)
@@ -176,7 +240,8 @@ public sealed partial class WindowsAmbientContextService
                 ["source_kind"] = MediaSourceKindClassifier.Classify(media.SourceAppUserModelId),
                 ["playback_status"] = media.PlaybackStatus,
                 ["title"] = media.Title,
-                ["artist"] = media.Artist
+                ["artist"] = media.Artist,
+                ["album_title"] = media.AlbumTitle
             }, "medium");
         }
 

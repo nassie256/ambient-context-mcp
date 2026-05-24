@@ -40,28 +40,37 @@ public static partial class AmbientContextCatalog
                 "Indicates an OS session end; opt-in only."),
 
             Privacy("foregroundApp.category", "medium", false,
-                "作業種別の推定に有用だが、行動履歴になりうる。",
+                "フォアグラウンドアプリの作業種別推定に有用だが、行動履歴になりうる。",
                 "Helpful for inferring task category, but can become an activity log."),
             Privacy("foregroundApp.appName", "medium", false,
-                "利用アプリ名は作業内容の手がかりになる。",
+                "フォアグラウンドアプリ名は作業内容の手がかりになる。",
                 "The app name in use hints at what the user is working on."),
             Privacy("foregroundApp.processName", "medium", false,
-                "アプリ識別子として有用だが、利用環境の詳細に当たる。",
+                "フォアグラウンドアプリ識別子として有用だが、利用環境の詳細に当たる。",
                 "Useful as an app identifier, but reveals details of the user's environment."),
             Privacy("foregroundApp.rawWindowTitle", "high", false,
-                "ページ名、ファイル名、DM相手、検索語などが混入しやすい。既定では送信しない。",
+                "フォアグラウンドウィンドウのタイトルにページ名、ファイル名、DM相手、検索語などが混入しやすい。既定では送信しない。",
                 "Easily leaks page titles, file names, DM partners, or search queries. Off by default."),
             Privacy("foregroundApp.titleSummary", "medium", false,
-                "生タイトルより低機微だが、既知サイト名や拡張子から作業内容を推測できる。",
+                "フォアグラウンドウィンドウの生タイトルより低機微だが、既知サイト名や拡張子から作業内容を推測できる。",
                 "Less sensitive than the raw title, but known site names or file extensions can still hint at activity."),
+            Privacy("events.foreground_title_changed", "medium", false,
+                "同一フォアグラウンドアプリ内のタブ/ファイル切替など、フォアグラウンドウィンドウのタイトルが変わった瞬間のタイミング信号。",
+                "Timing signal when the window title changes, e.g. tab or file switches within the same app."),
+            Privacy("events.foreground_title_changed.titleSummary", "medium", false,
+                "タイトル要約 (拡張子・既知サイト名など)。状態 path foregroundApp.titleSummary と対になる履歴側 opt-in。",
+                "Title summary (file extension, known site, etc.). History-side opt-in paired with state path foregroundApp.titleSummary."),
+            Privacy("events.foreground_title_changed.raw_window_title", "high", false,
+                "ページ名・ファイル名・DM相手・検索語など。状態 path foregroundApp.rawWindowTitle と対になる履歴側 opt-in。",
+                "Page titles, file names, DM partners, search queries, etc. History-side opt-in paired with state path foregroundApp.rawWindowTitle."),
             Privacy("events.foreground_app_category_changed", "medium", false,
                 "[廃止] foreground_changed の category_changed フラグに統合されました。このイベントは発火しません。現役イベントの一覧は ambient_context_describe_events を参照。",
                 "[Deprecated] Merged into foreground_changed's category_changed flag. This event no longer fires. See ambient_context_describe_events for the active event list."),
             Privacy("activity.contextSwitchesPerMin", "medium", false,
-                "アプリ切替頻度から作業リズムを推測できるためOpt-in向き。",
+                "フォアグラウンドアプリ切替頻度から作業リズムを推測できるためOpt-in向き。",
                 "App switch frequency reveals work rhythm; opt-in only."),
             Privacy("events.context_switch_burst", "medium", false,
-                "短時間のアプリ切替増加。作業リズムの履歴になるためOpt-in向き。",
+                "短時間のフォアグラウンドアプリ切替増加。作業リズムの履歴になるためOpt-in向き。",
                 "A burst of short-interval app switches. Opt-in because it forms a work-rhythm log."),
 
             Privacy("battery.bucket", "low", true,
@@ -168,6 +177,9 @@ public static partial class AmbientContextCatalog
             Privacy("events.media_session_changed.artist", "high", false,
                 "アーティスト/出演者。視聴履歴そのものなので個別 opt-in 推奨。",
                 "Artist or performer. A viewing history in itself; per-key opt-in recommended."),
+            Privacy("events.media_session_changed.album_title", "high", false,
+                "アルバム名。嗜好情報に直結するため、状態 path media.albumTitle と対になる履歴側 opt-in。",
+                "Album title. Directly tied to user taste; history-side opt-in paired with state path media.albumTitle."),
 
             Privacy("system.timeZoneId", "medium", false,
                 "地域推定につながる。時刻挨拶にはローカル処理で足りる。",
@@ -210,53 +222,12 @@ public static partial class AmbientContextCatalog
                 "External monitor connect / disconnect. Workspace info; opt-in only."),
 
             Privacy("events.foreground_changed", "medium", false,
-                "アプリ切替頻度から作業リズムを推測できる。",
+                "フォアグラウンドアプリ切替頻度から作業リズムを推測できる。",
                 "App switch frequency reveals work rhythm."),
             Privacy("events.media_session_changed", "medium", false,
                 "曲が変わった瞬間のタイミング信号。曲名/アーティストは別 path (.title/.artist) で個別 opt-in が必要。",
                 "Timing signal at the moment a track changes. Title / artist require separate opt-in via the .title / .artist paths.")
         ];
-    }
-
-    // 送信設定 UI に出す path 一覧。GetPrivacyClassifications() のサブセット。
-    // 順序は UI 表示順 (= ダイアログのリスト順) として意味があるので維持する。
-    private static readonly string[] TransmissionOptionPaths =
-    [
-        "foregroundApp.category",
-        "foregroundApp.appName",
-        "foregroundApp.processName",
-        "foregroundApp.titleSummary",
-        "foregroundApp.rawWindowTitle",
-        "events.foreground_changed",
-        "activity.contextSwitchesPerMin",
-        "events.context_switch_burst",
-        "media.isAvailable",
-        "media.playbackStatus",
-        "media.sourceAppUserModelId",
-        "media.title",
-        "media.artist",
-        "media.albumTitle",
-        "events.media_playback_started",
-        "events.media_playback_paused",
-        "events.media_session_changed",
-        "events.media_session_changed.title",
-        "events.media_session_changed.artist",
-        "system.timeZoneId",
-        "display.count",
-        "displays"
-    ];
-
-    public static IReadOnlyList<TransmissionOptionDefinition> GetTransmissionOptions()
-    {
-        var classifications = GetPrivacyClassifications()
-            .ToDictionary(item => item.Path, StringComparer.OrdinalIgnoreCase);
-        return TransmissionOptionPaths
-            .Select(path => new TransmissionOptionDefinition
-            {
-                Path = classifications[path].Path,
-                Sensitivity = classifications[path].Sensitivity
-            })
-            .ToList();
     }
 
     private static PrivacyClassification Privacy(

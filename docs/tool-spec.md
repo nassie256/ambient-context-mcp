@@ -53,7 +53,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 4 つのツールを�
 
 ### `ambient_context_describe_events`
 
-サーバが発火しうる全イベントの payload スキーマカタログを返します。**実データは含まれません**。クライアントは「foreground_changed の payload には何が入るか」「media_session_changed の title は高機微か」を 1 回の呼び出しで把握できます。値はリリース間でしか変化しないので一度取得してキャッシュしてください。
+サーバが発火しうる全イベントの payload スキーマカタログを返します。**実データは含まれません**。クライアントは「フォアグラウンドアプリ切替 (`foreground_changed`) の payload には何が入るか」「`media_session_changed` の title は高機微か」を 1 回の呼び出しで把握できます。値はリリース間でしか変化しないので一度取得してキャッシュしてください。
 
 **Input** (オブジェクトなし、引数 0):
 

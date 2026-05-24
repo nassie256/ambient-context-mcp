@@ -109,6 +109,13 @@ public sealed class MessageOnlyWindow : IDisposable
                 moduleHandle,
                 IntPtr.Zero);
 
+            // Install a SynchronizationContext so async continuations resume on
+            // this window thread (mirrors WPF Dispatcher behavior). Required so
+            // `_lastXxx` mutations after `await GetMediaAsync()` stay on the
+            // single owning thread.
+            SynchronizationContext.SetSynchronizationContext(
+                new MessageWindowSynchronizationContext(this));
+
             _ready.Set();
 
             if (_hwnd == IntPtr.Zero)
