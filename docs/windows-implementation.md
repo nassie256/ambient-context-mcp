@@ -11,7 +11,7 @@
 | `GlobalMemoryStatusEx` | メモリ使用率 |
 | `WTSRegisterSessionNotification` | ロック/アンロック検知 |
 | `RegisterPowerSettingNotification` | 電源・画面・lid 状態の遷移 |
-| `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` | フォアグラウンド切替 |
+| `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` | フォアグラウンドアプリ切替 |
 | `EnumDisplayMonitors` / `GetMonitorInfo` | ディスプレイ構成 |
 | `NetworkInterface.GetIsNetworkAvailable` (.NET) | オンライン/オフライン |
 | `Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager` (WinRT) | メディアセッション情報 (タイトル、アーティスト等) |
@@ -27,10 +27,12 @@
 | スレッド | 役割 |
 |---|---|
 | Worker (Kestrel + IHostedService) | MCP HTTP リクエスト処理、`AmbientContextHostedService` の `PeriodicTimer` |
-| `MessageOnlyWindow` 専用 STA スレッド | Win32 メッセージポンプ、フック配送、`CaptureAndStore` の実行 |
+| `MessageOnlyWindow` 専用 MTA スレッド | Win32 メッセージポンプ、フック配送、`CaptureAndStoreAsync` の実行 |
 | Tray STA スレッド | NotifyIcon、ContextMenuStrip、WPF SettingsWindow ホスト |
 
-定期キャプチャ (60 秒) は Worker スレッドで `RequestPeriodicCapture()` を呼び、それが `MessageOnlyWindow.PostCallback()` で window スレッドに `CaptureAndStore("timer")` を投函します。これにより `_recentEvents` 等の内部状態は単一スレッド (window スレッド) からのみ更新され、ロックは `_eventLock` のみで済みます。
+定期キャプチャ (60 秒) は Worker スレッドで `RequestPeriodicCapture()` を呼び、それが `MessageOnlyWindow.PostCallback()` で window スレッドに `CaptureAndStoreAsync("timer")` を投函します。これにより `_recentEvents` 等の内部状態は単一スレッド (window スレッド) からのみ更新され、ロックは `_eventLock` のみで済みます。
+
+`CaptureAsync()` 内部の `WindowsMediaContextCollector.GetMediaAsync()` (SMTC WinRT API) は同期 `.Wait()` ではなく `await` で待機します。待機中は window メッセージポンプが解放され、WTS / power / foreground hook の配送が遅延しません。`await` 完了後は `MessageWindowSynchronizationContext` 経由で継続が同じ window スレッドに戻るため、`Evaluate*` / `_lastXxx` 更新は引き続き単一スレッド上で直列化されます。
 
 ## 既知の制約
 

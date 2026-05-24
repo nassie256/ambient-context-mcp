@@ -64,14 +64,16 @@ Ambient Context MCP は OS から取得したコンテキストを path 単位�
 | `presence.idleSeconds` | medium | 細かい作業リズムの推測材料 |
 | `presence.sessionLocked` | medium | 離席/復帰の推測 |
 | `events.session_locked` / `_unlocked` / `_logon` / `_logoff` | medium | OS セッション遷移 |
-| `foregroundApp.category` | medium | 作業種別の推定。行動履歴 |
-| `foregroundApp.appName` | medium | 利用アプリ名 |
-| `foregroundApp.processName` | medium | 環境情報 |
-| `foregroundApp.titleSummary.*` | medium | サイト名/拡張子から作業推測 |
+| `foregroundApp.category` | medium | フォアグラウンドアプリの作業種別推定。行動履歴 |
+| `foregroundApp.appName` | medium | フォアグラウンドアプリ名 |
+| `foregroundApp.processName` | medium | フォアグラウンドアプリの環境情報 |
+| `foregroundApp.titleSummary.*` | medium | フォアグラウンドウィンドウのタイトル要約 (サイト名/拡張子から作業推測) |
 | `events.foreground_app_category_changed` | medium | **[廃止]** `events.foreground_changed` の `category_changed` フラグに統合。発火しない |
-| `events.foreground_changed` | medium | 切替頻度。payload: `category` / `app_name` / `process_name` / `category_changed` |
-| `activity.contextSwitchesPerMin` | medium | 作業リズム |
-| `events.context_switch_burst` | medium | 切替増加 |
+| `events.foreground_changed` | medium | フォアグラウンドアプリ切替。payload: `category` / `app_name` / `process_name` / `category_changed` |
+| `events.foreground_title_changed` | medium | フォアグラウンドウィンドウのタイトル変更 (要約/原文は別 path) |
+| `events.foreground_title_changed.titleSummary` | medium | フォアグラウンドウィンドウのタイトル要約 (payload key 単位 opt-in) |
+| `activity.contextSwitchesPerMin` | medium | フォアグラウンドアプリ切替頻度 |
+| `events.context_switch_burst` | medium | フォアグラウンドアプリ切替の急増 |
 | `media.isAvailable` | medium | メディア再生有無 |
 | `media.playbackStatus` | medium | 再生中状態 |
 | `media.sourceAppUserModelId` | medium | 再生元アプリ |
@@ -88,10 +90,11 @@ Ambient Context MCP は OS から取得したコンテキストを path 単位�
 
 | Path | 機微度 | 理由 |
 |---|---|---|
-| `foregroundApp.rawWindowTitle` | high | ページ名・ファイル名・DM相手・検索語 |
+| `foregroundApp.rawWindowTitle` | high | フォアグラウンドウィンドウのタイトル原文 (ページ名・ファイル名・DM相手・検索語) |
 | `media.title` | high | 曲名・動画名・配信タイトル |
 | `media.artist` | high | 嗜好情報 |
 | `media.albumTitle` | high | 嗜好情報 |
 | `media.sessions` | high | 複数アプリのタイトル |
 | `events.media_session_changed.title` | high | 曲名・動画名・配信タイトル (payload key 単位 opt-in) |
 | `events.media_session_changed.artist` | high | アーティスト/出演者 (payload key 単位 opt-in) |
+| `events.foreground_title_changed.raw_window_title` | high | フォアグラウンドウィンドウのタイトル原文 (payload key 単位 opt-in) |

@@ -24,12 +24,13 @@ A tray-resident process that exposes local Windows ambient context (presence, fo
 - **Privacy diagnostics**: `ambient_context_get_policy` lets clients self-diagnose "why this value is not being sent"
 - **Bilingual UI**: Japanese / English, follows OS culture by default; switchable from the settings dialog
 
-## Three exposed tools
+## Four exposed tools
 
 | Tool | Description |
 |---|---|
 | `ambient_context_get_states` | Current context states (presence, battery, foreground app category, etc.) |
 | `ambient_context_poll_events` | Unread events past the per-client cursor (user_returned, ac_power_connected, etc.) |
+| `ambient_context_describe_events` | Static payload schema catalog for all events (sensitivity, descriptions, examples; no live data) |
 | `ambient_context_get_policy` | Sensitivity classifications and effective transmit decisions (no live data) |
 
 ## Quick start

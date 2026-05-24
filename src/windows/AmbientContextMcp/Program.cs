@@ -1,6 +1,7 @@
 using System.Globalization;
 using AmbientContextMcp.AmbientContext;
 using AmbientContextMcp.Autostart;
+using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Core.Hub;
 using AmbientContextMcp.Core.Mcp;
 using AmbientContextMcp.Core.Settings;
@@ -10,6 +11,11 @@ using AmbientContextMcp.Tray;
 using AmbientContextMcp.Win32;
 
 var settingsStore = new JsonFileSettingsStore();
+AppDiagnosticLog.Configure(settingsStore.SettingsPath);
+AppDiagnosticLog.Log("app", "startup", new Dictionary<string, object?>
+{
+    ["settingsPath"] = settingsStore.SettingsPath
+});
 
 // UI culture を設定ストアから先に決める。これより後に Strings の static フィールド
 // (T(...) で IsEnglish を一度だけ参照) と PrivacyClassification.Reason の解決が

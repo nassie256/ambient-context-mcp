@@ -3,7 +3,7 @@
   "name": "io.github.nassie256/ambient-context-mcp",
   "title": "Ambient Context MCP",
   "description": "Local Windows ambient context (presence, foreground app, battery) as privacy-gated MCP tools.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "repository": {
     "url": "https://github.com/nassie256/ambient-context-mcp",
     "source": "github"
@@ -12,8 +12,8 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/nassie256/ambient-context-mcp/releases/download/v0.5.0/ambient-context-mcp-v0.5.0.mcpb",
-      "version": "0.5.0",
+      "identifier": "https://github.com/nassie256/ambient-context-mcp/releases/download/v0.6.0/ambient-context-mcp-v0.6.0.mcpb",
+      "version": "0.6.0",
       "fileSha256": "eaa10f37514f4109d68aeb38e1370ad073e9c758f80a749ec9a39d8e82a1f5a4",
       "transport": {
         "type": "stdio"

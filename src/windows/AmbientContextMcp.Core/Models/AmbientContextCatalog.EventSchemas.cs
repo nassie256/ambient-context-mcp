@@ -73,12 +73,23 @@ public static partial class AmbientContextCatalog
 
             // Foreground app
             Schema("foreground_changed", "medium",
-                "前景アプリの process_name または category が直近 emit と変わった瞬間。category_changed フラグでカテゴリ遷移かどうかを区別できる (旧 foreground_app_category_changed はこのフラグに統合された)。",
+                "フォアグラウンドアプリの process_name または category が直近 emit と変わった瞬間。category_changed フラグでカテゴリ遷移かどうかを区別できる (旧 foreground_app_category_changed はこのフラグに統合された)。",
                 "Fires when the foreground app's process_name or category differs from the last emit. The category_changed flag distinguishes a category transition (replaces the old foreground_app_category_changed event).",
-                Key("category", "medium", "新しいアプリのカテゴリ (空文字 = 該当データなし)。", "New app's category (empty string when no data).", "code"),
-                Key("app_name", "medium", "新しいアプリ名 (空文字 = 該当データなし)。", "New app's display name (empty string when no data).", "Visual Studio Code"),
-                Key("process_name", "medium", "新しい実行ファイル名。", "New app's executable name.", "Code.exe"),
-                Key("category_changed", "medium", "直近 emit のカテゴリと比較して \"true\" / \"false\"。アプリは変わったがカテゴリは同じ場合は \"false\"。", "\"true\" / \"false\" relative to the last emit's category. \"false\" when the app changed but stayed within the same category.", "true")),
+                Key("category", "medium", "新しいフォアグラウンドアプリのカテゴリ (空文字 = 該当データなし)。", "New app's category (empty string when no data).", "code"),
+                Key("app_name", "medium", "新しいフォアグラウンドアプリ名 (空文字 = 該当データなし)。", "New app's display name (empty string when no data).", "Visual Studio Code"),
+                Key("process_name", "medium", "新しいフォアグラウンドアプリの実行ファイル名。", "New app's executable name.", "Code.exe"),
+                Key("category_changed", "medium", "直近 emit のカテゴリと比較して \"true\" / \"false\"。フォアグラウンドアプリは変わったがカテゴリは同じ場合は \"false\"。", "\"true\" / \"false\" relative to the last emit's category. \"false\" when the app changed but stayed within the same category.", "true")),
+
+            Schema("foreground_title_changed", "medium",
+                "フォアグラウンドウィンドウのタイトル (原文 / 要約) が直近 emit と変わった瞬間。同一フォアグラウンドアプリ内のタブ/ファイル切替もここで履歴に残る。raw_window_title / titleSummary.* は別 path で個別 opt-in が必要。",
+                "Fires when the foreground window title (raw or summary) changes. Tab/file switches within the same app are recorded here. raw_window_title and titleSummary.* require separate opt-in paths.",
+                Key("category", "medium", "現在のフォアグラウンドアプリの作業カテゴリ (空文字 = 該当データなし)。", "Current work category (empty string when no data).", "browser"),
+                Key("app_name", "medium", "現在のフォアグラウンドアプリ名 (空文字 = 該当データなし)。", "Current app display name (empty string when no data).", "Google Chrome"),
+                Key("process_name", "medium", "現在のフォアグラウンドアプリの実行ファイル名。", "Current executable name.", "chrome.exe"),
+                Key("titleSummary.has_title", "medium", "タイトルが存在する場合 \"true\"。", "\"true\" when a title is present.", "true"),
+                Key("titleSummary.file_ext", "medium", "推定ファイル拡張子 (editor カテゴリ等)。", "Inferred file extension (editor category, etc.).", "cs"),
+                Key("titleSummary.known_site", "medium", "既知サイト名 (browser カテゴリ)。", "Known site name (browser category).", "github.com"),
+                Key("raw_window_title", "high", "フォアグラウンドウィンドウのタイトル原文。ページ名・ファイル名・DM相手・検索語など。", "Raw window title. Page names, file names, DM partners, search queries, etc.", "Program.cs - MyProject - Visual Studio")),
 
             // Battery
             Schema("battery_medium", "low",
@@ -171,7 +182,7 @@ public static partial class AmbientContextCatalog
                 Key("memory_pressure", "low", "メモリ圧迫バケット。", "Memory pressure bucket.", "moderate")),
 
             Schema("context_switch_burst", "medium",
-                "短時間にアプリ切替が増えたことを通知。作業リズム推測の材料。",
+                "短時間にフォアグラウンドアプリ切替が増えたことを通知。作業リズム推測の材料。",
                 "Fires when app-switch frequency spikes within a short window. Hints at work rhythm.",
                 Key("switches_per_min", "medium", "直近 1 分の切替回数。", "Number of switches in the last minute.", "42")),
 
@@ -183,7 +194,8 @@ public static partial class AmbientContextCatalog
                 Key("source_kind", "medium", "source_app から推定したメディア種別: \"music\" / \"video\" / \"browser\" / \"unknown\"。ブラウザはタブの中身が判定できないため別カテゴリ。ヒューリスティックなので誤分類はあり得る。", "Coarse media kind inferred from source_app: \"music\" / \"video\" / \"browser\" / \"unknown\". Browser is its own category since tab contents can't be inspected. Heuristic — misclassification is possible.", "music"),
                 Key("playback_status", "medium", "Playing / Paused / Stopped。", "Playing / Paused / Stopped.", "Playing"),
                 Key("title", "high", "曲名 / 動画タイトル。視聴履歴そのもの。", "Track / video title. Reveals listening / viewing history.", "Imagine"),
-                Key("artist", "high", "アーティスト / 出演者。", "Artist or performer.", "John Lennon")),
+                Key("artist", "high", "アーティスト / 出演者。", "Artist or performer.", "John Lennon"),
+                Key("album_title", "high", "アルバム名。", "Album title.", "Double Fantasy")),
 
             Schema("media_playback_started", "medium",
                 "メディアが Playing 状態に遷移した瞬間。",

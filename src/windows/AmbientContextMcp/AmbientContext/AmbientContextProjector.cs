@@ -92,6 +92,23 @@ public static class AmbientContextProjector
             states.Add(State(observedAt, "media.artist", media.Artist, "high"));
         }
 
+        if (!string.IsNullOrWhiteSpace(media.AlbumTitle))
+        {
+            states.Add(State(observedAt, "media.albumTitle", media.AlbumTitle, "high"));
+        }
+
+        for (var index = 0; index < displays.Count; index++)
+        {
+            var display = displays[index];
+            var prefix = "displays." + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            states.Add(State(observedAt, prefix + ".deviceName", display.DeviceName, "medium"));
+            states.Add(State(observedAt, prefix + ".primary", display.Primary.ToString().ToLowerInvariant(), "medium"));
+            states.Add(State(observedAt, prefix + ".left", display.Left.ToString(System.Globalization.CultureInfo.InvariantCulture), "medium"));
+            states.Add(State(observedAt, prefix + ".top", display.Top.ToString(System.Globalization.CultureInfo.InvariantCulture), "medium"));
+            states.Add(State(observedAt, prefix + ".width", display.Width.ToString(System.Globalization.CultureInfo.InvariantCulture), "medium"));
+            states.Add(State(observedAt, prefix + ".height", display.Height.ToString(System.Globalization.CultureInfo.InvariantCulture), "medium"));
+        }
+
         foreach (var setting in power.LastKnownSettings)
         {
             states.Add(State(observedAt, "power.lastKnownSettings." + setting.Key, setting.Value));
