@@ -1,3 +1,4 @@
+using AmbientContextMcp.Core.Diagnostics;
 using AmbientContextMcp.Core.Models;
 using Windows.Media.Control;
 
@@ -25,6 +26,10 @@ public static class WindowsMediaContextCollector
             }
             catch (TimeoutException)
             {
+                AppDiagnosticLog.Log("media", "get_media_request_timed_out", new Dictionary<string, object?>
+                {
+                    ["timeoutMs"] = (int)MediaApiTimeout.TotalMilliseconds
+                });
                 return new MediaContext { Error = "GetMedia.RequestAsync timed out" };
             }
 
@@ -40,6 +45,20 @@ public static class WindowsMediaContextCollector
             var selectedSession = allSessions.FirstOrDefault(item => item.IsPlaying)
                 ?? allSessions.FirstOrDefault(item => item.SourceAppUserModelId.Equals(currentSource, StringComparison.OrdinalIgnoreCase))
                 ?? allSessions.FirstOrDefault();
+
+            // SMTC 検出問題 (例: Spotify が再生中なのに sessions が空) の切り分け用。
+            // AUMID は Spotify.exe / chrome.exe / SpotifyAB...!Spotify など識別子であり
+            // 個人情報を含まない。Title/Artist など payload は意図的に記録しない。
+            AppDiagnosticLog.Log("media", "get_media_sessions", new Dictionary<string, object?>
+            {
+                ["count"] = allSessions.Count,
+                ["aumids"] = allSessions.Select(item => item.SourceAppUserModelId).ToList(),
+                ["currentSource"] = currentSource,
+                ["selectedSource"] = selectedSession?.SourceAppUserModelId ?? "",
+                ["selectedIsPlaying"] = selectedSession?.IsPlaying ?? false,
+                ["playingCount"] = allSessions.Count(item => item.IsPlaying),
+                ["sessionErrors"] = allSessions.Count(item => !string.IsNullOrEmpty(item.Error))
+            });
 
             var sessions = allSessions.Select(item => CopyMediaSession(item, ReferenceEquals(item, selectedSession))).ToList();
             var session = selectedSession is null ? null : FindSessionBySource(manager, selectedSession.SourceAppUserModelId);
@@ -100,6 +119,7 @@ public static class WindowsMediaContextCollector
         }
         catch (Exception ex)
         {
+            AppDiagnosticLog.LogException("media", "get_media_failed", ex);
             return new MediaContext
             {
                 Error = ex.GetType().Name + ": " + ex.Message
