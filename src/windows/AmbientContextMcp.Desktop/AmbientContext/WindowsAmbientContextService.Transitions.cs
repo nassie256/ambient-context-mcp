@@ -1,5 +1,6 @@
 using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace AmbientContextMcp.AmbientContext;
 

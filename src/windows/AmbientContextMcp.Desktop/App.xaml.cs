@@ -7,6 +7,8 @@ using AmbientContextMcp.Core.Models;
 using AmbientContextMcp.Core.Settings;
 using AmbientContextMcp.Hosting;
 using AmbientContextMcp.Mcp;
+using AmbientContextMcp.Settings;
+using AmbientContextMcp.Tray;
 using AmbientContextMcp.Win32;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,6 +19,7 @@ namespace AmbientContextMcp;
 public partial class App : Application
 {
     private IHost? _host;
+    private SettingsWindow? _settingsWindow;
 
     public App()
     {
@@ -25,8 +28,6 @@ public partial class App : Application
 
     public IServiceProvider Services => _host?.Services
         ?? throw new InvalidOperationException("Host not started.");
-
-    public IHost? Host => _host;
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
@@ -48,13 +49,36 @@ public partial class App : Application
         builder.Services.AddSingleton<LocalContextHub>();
         builder.Services.AddSingleton<WindowsAmbientContextService>();
         builder.Services.AddSingleton<AutostartManager>();
+        builder.Services.AddSingleton<TrayService>();
         builder.Services.AddHostedService<AmbientContextHostedService>();
         builder.Services.AddHostedService<McpKestrelHostedService>();
-        // Tray / SettingsWindow は後続 Task で追加
 
         _host = builder.Build();
         WireSnapshotForwarding(_host.Services);
         await _host.StartAsync();
+
+        var tray = _host.Services.GetRequiredService<TrayService>();
+        tray.Show(OpenSettings);
+    }
+
+    private void OpenSettings()
+    {
+        AppDiagnosticLog.Log("tray", "open_settings_requested");
+        if (_settingsWindow is not null)
+        {
+            SettingsWindowPlacement.EnsureVisible(_settingsWindow);
+            return;
+        }
+        try
+        {
+            _settingsWindow = ActivatorUtilities.CreateInstance<SettingsWindow>(Services);
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Activate();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnosticLog.LogException("tray", "open_settings_failed", ex);
+        }
     }
 
     private static void ApplyUiCulture(UiSettings ui)
@@ -76,7 +100,10 @@ public partial class App : Application
     {
         var collector = services.GetRequiredService<WindowsAmbientContextService>();
         var hub = services.GetRequiredService<LocalContextHub>();
-        // Tray 一時停止状態は Task 7 で接続 (現状は無条件 Ingest)。
-        collector.SnapshotUpdated += (_, snapshot) => hub.Ingest(snapshot);
+        var tray = services.GetRequiredService<TrayService>();
+        collector.SnapshotUpdated += (_, snapshot) =>
+        {
+            if (!tray.IsPaused) hub.Ingest(snapshot);
+        };
     }
 }

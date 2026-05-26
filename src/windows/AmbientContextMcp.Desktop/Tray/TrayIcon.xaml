@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="AmbientContextMcp.Tray.TrayIcon"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tb="using:H.NotifyIcon">
+    <tb:TaskbarIcon
+        x:Name="Icon"
+        IconSource="ms-appx:///Resources/AppIcon.ico"
+        ToolTipText="Ambient Context MCP"
+        LeftClickCommand="{x:Bind OpenSettingsCommand}"
+        NoLeftClickDelay="True">
+        <tb:TaskbarIcon.ContextFlyout>
+            <MenuFlyout>
+                <MenuFlyoutItem x:Name="StatusItem" IsEnabled="False" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem x:Name="SettingsItem" Click="OnSettingsClick" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem x:Name="CopyUrlItem" Click="OnCopyUrlClick" />
+                <MenuFlyoutItem x:Name="CopyTokenItem" Click="OnCopyTokenClick" />
+                <MenuFlyoutItem x:Name="CopySnippetItem" Click="OnCopySnippetClick" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem x:Name="PauseResumeItem" Click="OnPauseResumeClick" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem x:Name="ExitItem" Click="OnExitClick" />
+            </MenuFlyout>
+        </tb:TaskbarIcon.ContextFlyout>
+    </tb:TaskbarIcon>
+</UserControl>
