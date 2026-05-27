@@ -20,6 +20,7 @@ public partial class App : Application
 {
     private IHost? _host;
     private SettingsWindow? _settingsWindow;
+    private Window? _shutdownAnchor;
 
     public App()
     {
@@ -56,6 +57,12 @@ public partial class App : Application
         _host = builder.Build();
         WireSnapshotForwarding(_host.Services);
         await _host.StartAsync();
+
+        // Anchor Window: WinUI 3 は「最後の Window が閉じると App.Exit」を発火する。
+        // Settings ダイアログを閉じても常駐し続けるよう、不可視のダミーを 1 つ保持する。
+        _shutdownAnchor = new Window { Title = "AmbientContextMcp.AnchorWindow" };
+        _shutdownAnchor.Activate();
+        _shutdownAnchor.AppWindow.Hide();
 
         var tray = _host.Services.GetRequiredService<TrayService>();
         tray.Show(OpenSettings);

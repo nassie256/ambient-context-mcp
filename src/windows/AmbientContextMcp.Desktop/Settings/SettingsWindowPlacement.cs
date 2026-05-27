@@ -9,8 +9,8 @@ namespace AmbientContextMcp.Settings;
 
 public static class SettingsWindowPlacement
 {
-    private const int DefaultWidth = 600;
-    private const int DefaultHeight = 540;
+    private const int DefaultWidth = 720;
+    private const int DefaultHeight = 680;
 
     public static void Apply(Window window, ISettingsStore store)
     {

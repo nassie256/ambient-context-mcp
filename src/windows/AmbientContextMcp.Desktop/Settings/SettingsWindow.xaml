@@ -88,6 +88,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <TextBlock x:Name="TransmissionExplanationText" Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,10" />
@@ -182,6 +183,13 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </Border>
+
+                    <TextBlock x:Name="SensitivityLegendText"
+                               Grid.Row="4"
+                               Margin="0,8,0,0"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                 </Grid>
             </PivotItem>
         </Pivot>

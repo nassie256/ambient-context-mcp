@@ -98,6 +98,7 @@ public sealed partial class SettingsWindow : Window
         TransmissionExplanationText.Text = Strings.TransmissionExplanation;
         SelectAllTransmissionCheckBox.Content = Strings.AllowAllCheckbox;
         EventHistoryGroupText.Text = Strings.EventHistoryGroup;
+        SensitivityLegendText.Text = Strings.SensitivityLegend;
         LabelRetentionText.Text = Strings.LabelRetention;
         LabelMaxCountText.Text = Strings.LabelMaxCount;
         Retention1HourItem.Content = Strings.Retention1Hour;
@@ -147,25 +148,33 @@ public sealed partial class SettingsWindow : Window
         AppDiagnosticLog.Log("settings", "save_begin");
         var startedAt = Environment.TickCount64;
 
-        SaveMcpSettings();
-        SaveTransmissionSettings();
-        SaveLocalContextSettings();
-        SaveUiSettings();
-        ApplyAutostart();
-
-        _collector.ReloadTransmissionPolicy();
-        _hub.ReloadSettings();
-        _mcpHost.ReloadSettings();
-
-        var langChanged = !string.Equals(GetSelectedLanguage(), _initialLanguage, StringComparison.OrdinalIgnoreCase);
-        SettingsStatusText.Text = langChanged ? Strings.StatusSavedNeedsRestart : Strings.StatusSaved;
-        RefreshMcpStatus();
-
-        AppDiagnosticLog.Log("settings", "save_end", new Dictionary<string, object?>
+        try
         {
-            ["durationMs"] = Environment.TickCount64 - startedAt,
-            ["languageChanged"] = langChanged
-        });
+            SaveMcpSettings();
+            SaveTransmissionSettings();
+            SaveLocalContextSettings();
+            SaveUiSettings();
+            ApplyAutostart();
+
+            _collector.ReloadTransmissionPolicy();
+            _hub.ReloadSettings();
+            _mcpHost.ReloadSettings();
+
+            var langChanged = !string.Equals(GetSelectedLanguage(), _initialLanguage, StringComparison.OrdinalIgnoreCase);
+            SettingsStatusText.Text = langChanged ? Strings.StatusSavedNeedsRestart : Strings.StatusSaved;
+            RefreshMcpStatus();
+
+            AppDiagnosticLog.Log("settings", "save_end", new Dictionary<string, object?>
+            {
+                ["durationMs"] = Environment.TickCount64 - startedAt,
+                ["languageChanged"] = langChanged
+            });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnosticLog.LogException("settings", "save_failed", ex);
+            SettingsStatusText.Text = $"Save failed: {ex.GetType().Name}: {ex.Message}";
+        }
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
