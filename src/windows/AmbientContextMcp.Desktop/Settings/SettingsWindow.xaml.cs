@@ -150,15 +150,14 @@ public sealed partial class SettingsWindow : Window
 
         try
         {
-            SaveMcpSettings();
-            SaveTransmissionSettings();
-            SaveLocalContextSettings();
-            SaveUiSettings();
-            ApplyAutostart();
-
-            _collector.ReloadTransmissionPolicy();
-            _hub.ReloadSettings();
-            _mcpHost.ReloadSettings();
+            SaveStep("save_mcp", SaveMcpSettings);
+            SaveStep("save_transmission", SaveTransmissionSettings);
+            SaveStep("save_local_context", SaveLocalContextSettings);
+            SaveStep("save_ui", SaveUiSettings);
+            SaveStep("apply_autostart", ApplyAutostart);
+            SaveStep("reload_collector", () => _collector.ReloadTransmissionPolicy());
+            SaveStep("reload_hub", () => _hub.ReloadSettings());
+            SaveStep("reload_mcp", () => _mcpHost.ReloadSettings());
 
             var langChanged = !string.Equals(GetSelectedLanguage(), _initialLanguage, StringComparison.OrdinalIgnoreCase);
             SettingsStatusText.Text = langChanged ? Strings.StatusSavedNeedsRestart : Strings.StatusSaved;
@@ -174,6 +173,22 @@ public sealed partial class SettingsWindow : Window
         {
             AppDiagnosticLog.LogException("settings", "save_failed", ex);
             SettingsStatusText.Text = $"Save failed: {ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    private static void SaveStep(string name, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnosticLog.LogException("settings", "step_failed", ex, new Dictionary<string, object?>
+            {
+                ["step"] = name
+            });
+            throw;
         }
     }
 
@@ -291,8 +306,10 @@ public sealed partial class SettingsWindow : Window
             SchemaVersion = 1,
             Language = lang
         });
-        // 次回起動時に反映 (現行 WPF 版と同じ "要再起動" 仕様)
-        Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = lang ?? "";
+        // Unpackaged WinUI 3 では Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride
+        // が InvalidOperationException を投げる。settings.json 経由で次回起動時に
+        // App.ApplyUiCulture が CultureInfo.CurrentUICulture を切り替えるので
+        // ここでは何もしない (要再起動仕様)。
     }
 
     private string GetSelectedLanguage() =>
