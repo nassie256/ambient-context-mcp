@@ -12,15 +12,18 @@ namespace AmbientContextMcp.Bootstrap;
 public static class RuntimeBootstrap
 {
     private const uint MinMajor = 1;
-    private const uint MinMinor = 6;
+    private const uint MinMinor = 8;
     private const string DownloadUrl =
-        "https://aka.ms/windowsappsdk/1.6/latest/windowsappruntimeinstall-x64.exe";
+        "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe";
 
     public static bool TryInitialize(out string? error)
     {
         try
         {
-            Microsoft.Windows.ApplicationModel.DynamicDependency.Bootstrap.Initialize(MinMajor);
+            // Bootstrap.Initialize の引数は 0xMMmm エンコード (Major 上位 16bit, Minor 下位 16bit)。
+            // 例: 1.8 -> 0x00010008。生のメジャー値を渡すと "0.{major}" と解釈されて常に失敗する。
+            var encoded = (MinMajor << 16) | MinMinor;
+            Microsoft.Windows.ApplicationModel.DynamicDependency.Bootstrap.Initialize(encoded);
             error = null;
             return true;
         }
