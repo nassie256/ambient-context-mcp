@@ -75,6 +75,17 @@ public static class RuntimeBootstrap
         }
     }
 
+    /// <summary>
+    /// 致命的なエラー (例: ホスト起動失敗) を Win32 MessageBox で表示する。
+    /// WinUI 初期化の前後どちらでも使えるよう ContentDialog ではなく MessageBox を使う。
+    /// </summary>
+    public static void ShowFatalError(string message)
+    {
+        const uint MB_OK = 0x00000000;
+        const uint MB_ICONERROR = 0x00000010;
+        MessageBoxW(IntPtr.Zero, message, "Ambient Context MCP", MB_OK | MB_ICONERROR);
+    }
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBoxW(IntPtr hWnd, string lpText, string lpCaption, uint uType);
 }

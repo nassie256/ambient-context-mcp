@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace AmbientContextMcp.Tray;
 
-public sealed class TrayService
+public sealed class TrayService : IDisposable
 {
     private readonly McpServerHost _mcpHost;
     private readonly IHostApplicationLifetime _lifetime;
@@ -23,4 +23,8 @@ public sealed class TrayService
     }
 
     public void RefreshStatus() => _host?.RefreshStatus();
+
+    // IHost.DisposeAsync (アプリ終了時) でこの singleton も破棄され、
+    // TrayHost.Dispose が Shell_NotifyIcon(NIM_DELETE) でアイコンを除去する。
+    public void Dispose() => _host?.Dispose();
 }

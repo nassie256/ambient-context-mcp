@@ -172,7 +172,11 @@ public sealed partial class SettingsWindow : Window
         catch (Exception ex)
         {
             AppDiagnosticLog.LogException("settings", "save_failed", ex);
-            SettingsStatusText.Text = $"Save failed: {ex.GetType().Name}: {ex.Message}";
+            SettingsStatusText.Text = string.Format(
+                CultureInfo.InvariantCulture,
+                Strings.StatusSaveFailedFormat,
+                ex.GetType().Name,
+                ex.Message);
         }
     }
 

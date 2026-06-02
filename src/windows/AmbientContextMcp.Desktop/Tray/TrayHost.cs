@@ -16,7 +16,6 @@ public sealed class TrayHost : IDisposable
 {
     private const uint WM_USER = 0x0400;
     private const uint WM_TRAYICON = WM_USER + 1;
-    private const uint WM_DESTROY = 0x0002;
     private const uint WM_LBUTTONUP = 0x0202;
     private const uint WM_RBUTTONUP = 0x0205;
     private const uint WM_COMMAND = 0x0111;
@@ -40,8 +39,6 @@ public sealed class TrayHost : IDisposable
     private const uint MF_GRAYED = 0x00000001;
 
     private const uint TPM_RIGHTBUTTON = 0x0002;
-    private const uint TPM_RETURNCMD = 0x0100;
-    private const uint TPM_NONOTIFY = 0x0080;
 
     private const int IMAGE_ICON = 1;
     private const uint LR_LOADFROMFILE = 0x00000010;

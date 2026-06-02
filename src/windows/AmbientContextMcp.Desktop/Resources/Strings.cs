@@ -173,6 +173,11 @@ public static class Strings
         "Claude Code 用のコマンドをクリップボードにコピーしました。",
         "Copied the Claude Code command to the clipboard.");
 
+    /// <summary>Format: {0} = exception type, {1} = message.</summary>
+    public static string StatusSaveFailedFormat { get; } = T(
+        "保存に失敗しました: {0}: {1}",
+        "Save failed: {0}: {1}");
+
     /// <summary>Format: {0} = port number.</summary>
     public static string StatusMcpRunningFormat { get; } = T(
         "起動中 :{0}",
