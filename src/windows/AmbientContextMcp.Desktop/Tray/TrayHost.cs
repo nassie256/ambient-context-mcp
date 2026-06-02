@@ -176,8 +176,11 @@ public sealed class TrayHost : IDisposable
                     _openSettings();
                     return IntPtr.Zero;
                 case WM_RBUTTONUP:
-                case 0x0007: // NIN_SELECT / context menu request
-                case 0x406:  // WM_CONTEXTMENU
+                    // v4 通知でも右クリックは標準の WM_RBUTTONUP が lParam 下位に届く
+                    // (実使用ログで確認済み)。WM_CONTEXTMENU(0x007B) はキーボード起動だけ
+                    // でなく右クリックでも併発し ShowContextMenu が二重発火するため扱わない。
+                    // 旧コードの 0x0007 / 0x406 は誤り (0x406 は NIN_POPUPOPEN でホバー時に
+                    // 発火しメニューが誤って開く) だったため削除。
                     ShowContextMenu();
                     return IntPtr.Zero;
             }

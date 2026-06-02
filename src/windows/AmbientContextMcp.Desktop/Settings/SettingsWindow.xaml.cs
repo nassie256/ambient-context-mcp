@@ -65,6 +65,7 @@ public sealed partial class SettingsWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        SettingsWindowPlacement.Save(this, _settingsStore);
         AppDiagnosticLog.Log("settings", "window_closing");
     }
 
