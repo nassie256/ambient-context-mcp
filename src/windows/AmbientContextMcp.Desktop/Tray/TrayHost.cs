@@ -16,9 +16,14 @@ public sealed class TrayHost : IDisposable
 {
     private const uint WM_USER = 0x0400;
     private const uint WM_TRAYICON = WM_USER + 1;
-    private const uint WM_LBUTTONUP = 0x0202;
-    private const uint WM_RBUTTONUP = 0x0205;
     private const uint WM_COMMAND = 0x0111;
+
+    // v4 通知イベント (NOTIFYICON_VERSION_4 では LOWORD(lParam) に入る)。WM_TRAYICON とは
+    // 別フィールド (msg vs LOWORD(lParam)) なので NIN_KEYSELECT が WM_TRAYICON と同値 (0x0401)
+    // でも衝突しない。
+    private const uint NIN_SELECT = WM_USER;          // 0x0400 マウス左クリック
+    private const uint NIN_KEYSELECT = WM_USER + 1;   // 0x0401 キーボード Enter/Space 起動
+    private const uint WM_CONTEXTMENU = 0x007B;       // 右クリック / キーボードのメニューキー
 
     private const uint NIM_ADD = 0x00000000;
     private const uint NIM_MODIFY = 0x00000001;
@@ -55,6 +60,7 @@ public sealed class TrayHost : IDisposable
     private IntPtr _hIcon;
     private bool _disposed;
     private bool _paused;
+    private long _lastActivationTick;
 
     // Menu command IDs (任意の値で OK、衝突しないように)
     private const uint CmdSettings = 1001;
@@ -167,21 +173,27 @@ public sealed class TrayHost : IDisposable
     {
         if (msg == WM_TRAYICON)
         {
-            // V4 notify: lParam の low word が event message
+            // v4 notify: LOWORD(lParam) が event message。
             var notifyEvent = (uint)(lParam.ToInt64() & 0xFFFF);
             switch (notifyEvent)
             {
-                case WM_LBUTTONUP:
+                // 左起動: マウス左クリックは NIN_SELECT、キーボード Enter/Space は
+                // NIN_KEYSELECT で届く。生の WM_LBUTTONUP は扱わず v4 通知に一本化する
+                // ことで、キーボード/アクセシビリティ経由の起動も拾える。
+                case NIN_SELECT:
+                case NIN_KEYSELECT:
+                    // NIN_KEYSELECT は Space キーで 2 回飛ぶ仕様のため de-dup する。
+                    if (IsDuplicateActivation()) return IntPtr.Zero;
                     AppDiagnosticLog.Log("tray", "icon_left_click");
                     _openSettings();
                     return IntPtr.Zero;
-                case WM_RBUTTONUP:
-                    // v4 通知でも右クリックは標準の WM_RBUTTONUP が lParam 下位に届く
-                    // (実使用ログで確認済み)。WM_CONTEXTMENU(0x007B) はキーボード起動だけ
-                    // でなく右クリックでも併発し ShowContextMenu が二重発火するため扱わない。
-                    // 旧コードの 0x0007 / 0x406 は誤り (0x406 は NIN_POPUPOPEN でホバー時に
-                    // 発火しメニューが誤って開く) だったため削除。
-                    ShowContextMenu();
+
+                // コンテキストメニュー: 右クリックもキーボードのメニューキー
+                // (Shift+F10 / アプリケーションキー) も v4 では共に WM_CONTEXTMENU で届く。
+                // 生の WM_RBUTTONUP は扱わない (両方拾うとマウス右クリックで二重発火するため。
+                // 0x406 = NIN_POPUPOPEN もホバーで誤発火するので扱わない)。
+                case WM_CONTEXTMENU:
+                    ShowContextMenu(GetAnchorPoint(wParam));
                     return IntPtr.Zero;
             }
         }
@@ -198,7 +210,35 @@ public sealed class TrayHost : IDisposable
         return DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
-    private void ShowContextMenu()
+    // NIN_KEYSELECT は Space キーで 2 回連続して届くため、短時間の重複起動を弾く。
+    // _openSettings 自体は冪等 (既存ウィンドウは再フォーカス) なので実害は小さいが、
+    // 診断ログと再アクティブ化の重複を避ける。WndProc は UI スレッド上で同期実行される
+    // ため単純なフィールドで十分。
+    private bool IsDuplicateActivation()
+    {
+        var now = Environment.TickCount64;
+        if (now - _lastActivationTick < 300) return true;
+        _lastActivationTick = now;
+        return false;
+    }
+
+    // v4 の WM_CONTEXTMENU では wParam の下位/上位ワードがアンカー座標 (符号付き short)。
+    // キーボード起動時はアイコン左上が入る。mouse/keyboard どちらでも正しい位置に出せる。
+    // 念のため (0,0) のときだけカーソル位置にフォールバックする。
+    private POINT GetAnchorPoint(IntPtr wParam)
+    {
+        var raw = wParam.ToInt64();
+        var x = (short)(raw & 0xFFFF);
+        var y = (short)((raw >> 16) & 0xFFFF);
+        if (x == 0 && y == 0)
+        {
+            GetCursorPos(out var pt);
+            return pt;
+        }
+        return new POINT { x = x, y = y };
+    }
+
+    private void ShowContextMenu(POINT anchor)
     {
         var menu = CreatePopupMenu();
         if (menu == IntPtr.Zero) return;
@@ -219,10 +259,9 @@ public sealed class TrayHost : IDisposable
             AppendMenuW(menu, MF_SEPARATOR, IntPtr.Zero, null);
             AppendMenuW(menu, MF_STRING, new IntPtr(CmdExit), Strings.TrayExit);
 
-            GetCursorPos(out var pt);
             // TrackPopupMenu の前に SetForegroundWindow しないとメニュー操作後にメニューが残るバグの workaround
             SetForegroundWindow(_hwnd);
-            TrackPopupMenu(menu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, _hwnd, IntPtr.Zero);
+            TrackPopupMenu(menu, TPM_RIGHTBUTTON, anchor.x, anchor.y, 0, _hwnd, IntPtr.Zero);
             PostMessageW(_hwnd, 0, IntPtr.Zero, IntPtr.Zero);
         }
         finally
