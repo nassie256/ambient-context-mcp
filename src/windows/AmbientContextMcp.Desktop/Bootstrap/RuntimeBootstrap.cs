@@ -1,0 +1,91 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+namespace AmbientContextMcp.Bootstrap;
+
+/// <summary>
+/// Windows App Runtime (WinAppSDK) を Unpackaged アプリで初期化するラッパー。
+/// プロセス起動直後 (Application.Start より前) に <see cref="TryInitialize"/> を呼ぶ。
+/// 失敗時は <see cref="ShowMissingRuntimeMessage"/> で Win32 MessageBox を出して
+/// 公式 DL ページに誘導し、プロセスは exit 1 する。
+/// </summary>
+public static class RuntimeBootstrap
+{
+    private const uint MinMajor = 1;
+    private const uint MinMinor = 8;
+    private const string DownloadUrl =
+        "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe";
+
+    public static bool TryInitialize(out string? error)
+    {
+        try
+        {
+            // Bootstrap.Initialize の引数は 0xMMmm エンコード (Major 上位 16bit, Minor 下位 16bit)。
+            // 例: 1.8 -> 0x00010008。生のメジャー値を渡すと "0.{major}" と解釈されて常に失敗する。
+            var encoded = (MinMajor << 16) | MinMinor;
+            Microsoft.Windows.ApplicationModel.DynamicDependency.Bootstrap.Initialize(encoded);
+            error = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Windows App Runtime {MinMajor}.{MinMinor}+ is required. ({ex.GetType().Name}: {ex.Message})";
+            return false;
+        }
+    }
+
+    public static void Shutdown()
+    {
+        try
+        {
+            Microsoft.Windows.ApplicationModel.DynamicDependency.Bootstrap.Shutdown();
+        }
+        catch
+        {
+            // Bootstrapper 未初期化での Shutdown は無視 (TryInitialize が失敗した直後など)。
+        }
+    }
+
+    public static void ShowMissingRuntimeMessage(string error)
+    {
+        const uint MB_OKCANCEL = 0x00000001;
+        const uint MB_ICONERROR = 0x00000010;
+        const int IDOK = 1;
+
+        var message =
+            "Ambient Context MCP requires Windows App Runtime.\n\n" +
+            error + "\n\n" +
+            "Press OK to open the download page, or Cancel to exit.";
+
+        var result = MessageBoxW(IntPtr.Zero, message, "Ambient Context MCP", MB_OKCANCEL | MB_ICONERROR);
+        if (result == IDOK)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = DownloadUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch
+            {
+                // ブラウザ起動失敗時は best-effort。ユーザーは README 経由で URL を確認可能。
+            }
+        }
+    }
+
+    /// <summary>
+    /// 致命的なエラー (例: ホスト起動失敗) を Win32 MessageBox で表示する。
+    /// WinUI 初期化の前後どちらでも使えるよう ContentDialog ではなく MessageBox を使う。
+    /// </summary>
+    public static void ShowFatalError(string message)
+    {
+        const uint MB_OK = 0x00000000;
+        const uint MB_ICONERROR = 0x00000010;
+        MessageBoxW(IntPtr.Zero, message, "Ambient Context MCP", MB_OK | MB_ICONERROR);
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBoxW(IntPtr hWnd, string lpText, string lpCaption, uint uType);
+}

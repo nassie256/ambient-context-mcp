@@ -91,6 +91,10 @@ public static class Strings
         "イベント履歴",
         "Event history");
 
+    public static string SensitivityLegend { get; } = T(
+        "機微度: Low = 公開しても影響が小さい / Medium = 文脈次第で機微になり得る / High = 個人特定や具体的行動を含み得る",
+        "Sensitivity: Low = low impact if shared / Medium = context-dependent / High = may identify the user or expose specific behavior");
+
     public static string LabelRetention { get; } = T(
         "保持期間",
         "Retention");
@@ -168,6 +172,11 @@ public static class Strings
     public static string StatusClaudeCodeCopied { get; } = T(
         "Claude Code 用のコマンドをクリップボードにコピーしました。",
         "Copied the Claude Code command to the clipboard.");
+
+    /// <summary>Format: {0} = exception type, {1} = message.</summary>
+    public static string StatusSaveFailedFormat { get; } = T(
+        "保存に失敗しました: {0}: {1}",
+        "Save failed: {0}: {1}");
 
     /// <summary>Format: {0} = port number.</summary>
     public static string StatusMcpRunningFormat { get; } = T(
