@@ -29,8 +29,11 @@ internal static class Program
     public static async Task<int> Main()
     {
         // stdout is reserved for JSON-RPC. Diagnostics go to stderr.
-        Console.InputEncoding = Encoding.UTF8;
-        Console.OutputEncoding = Encoding.UTF8;
+        // Console.InputEncoding/OutputEncoding はここでは設定しない: WinExe (GUI サブ
+        // システム) ではコンソールが割り当てられず、これらのセッターが内部の
+        // SetConsoleInputEncoding で IOException("ハンドルが無効です") を投げる。
+        // 代わりに stdin は UTF-8 StreamReader、stdout は生 UTF-8 バイト書き込みで扱う
+        // (ProxyLoopAsync を参照)。
 
         try
         {
@@ -113,7 +116,9 @@ internal static class Program
 
     private static async Task ProxyLoopAsync(Discovery discovery)
     {
-        var stdin = Console.In;
+        // Console.In ではなく明示的な UTF-8 StreamReader を使う。WinExe では
+        // Console.InputEncoding を設定できないため、ここで読み取り側の encoding を固定する。
+        using var stdin = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false));
         var stdout = Console.OpenStandardOutput();
         var newline = "\n"u8.ToArray();
 

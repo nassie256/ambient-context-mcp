@@ -67,9 +67,15 @@ public partial class App : Application
 
             // Anchor Window: WinUI 3 は「最後の Window が閉じると App.Exit」を発火する。
             // Settings ダイアログを閉じても常駐し続けるよう、不可視のダミーを 1 つ保持する。
+            // Activate() は内部で ShowWindow(SW_SHOW) を呼ぶため、空のアンカーウィンドウが
+            // 起動時に一瞬画面へ出てしまう。Activate の「前」に画面外へ退避させておくと
+            // 既定位置に一度も描画されない (Activate 後の移動では間に合わずフラッシュする)。
             _shutdownAnchor = new Window { Title = "AmbientContextMcp.AnchorWindow" };
+            var anchorWindow = _shutdownAnchor.AppWindow;
+            anchorWindow.IsShownInSwitchers = false; // タスクバー / Alt+Tab に出さない
+            anchorWindow.MoveAndResize(new Windows.Graphics.RectInt32(-32000, -32000, 1, 1));
             _shutdownAnchor.Activate();
-            _shutdownAnchor.AppWindow.Hide();
+            anchorWindow.Hide();
 
             var tray = _host.Services.GetRequiredService<TrayService>();
             tray.Show(OpenSettings);

@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <!--
+      WinExe (GUI サブシステム) でビルドする。本ブリッジは MCP クライアントが stdio
+      (リダイレクトされたパイプ) 経由で起動する stdio シムであり、コンソール窓は不要。
+      Exe (CUI) だと、起動側が継承可能なコンソールを持たず CREATE_NO_WINDOW も付け
+      ない場合に OS が可視コンソール窓を割り当ててしまう (起動時に cmd 風の窓が一瞬出る)。
+      GUI サブシステムならランチャーのフラグに依らずコンソールが割り当てられず、
+      stdin/stdout はリダイレクト済みパイプを使うので JSON-RPC 中継はそのまま動く。
+    -->
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
