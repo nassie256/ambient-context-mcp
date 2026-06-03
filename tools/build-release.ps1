@@ -3,9 +3,11 @@
     Produces both the zip and the .mcpb release artifacts for Ambient Context MCP.
 
 .DESCRIPTION
-    Runs `dotnet publish` once for the tray (`AmbientContextMcp`) and the stdio
-    bridge (`AmbientContextMcp.StdioBridge`) into a shared staging server/ dir,
-    then assembles two artifacts from the same output:
+    Runs `dotnet build -c Release` for the tray (`AmbientContextMcp.Desktop`) and
+    the stdio bridge (`AmbientContextMcp.StdioBridge`) into a shared staging server/
+    dir, then assembles two artifacts from the same output. (build, NOT publish:
+    `dotnet publish` drops the WinUI 3 compiled XAML (.xbf) and resource index (.pri)
+    for unpackaged apps, which broke the settings window in v0.7.0.)
 
       dist/ambient-context-mcp-v<Version>-win-x64.zip
           Flat layout, same as historical v0.x releases. Suitable for
@@ -69,34 +71,37 @@ if (Test-Path $staging) {
 New-Item -ItemType Directory -Force -Path $serverDir | Out-Null
 New-Item -ItemType Directory -Force -Path $distRoot  | Out-Null
 
-function Invoke-Publish {
+# Use `dotnet build`, NOT `dotnet publish`. For unpackaged WinUI 3, `dotnet publish`
+# drops the compiled XAML (App.xbf / Settings/SettingsWindow.xbf) and the resource
+# index (ambient-mcp.pri), so XAML-defined windows throw XamlParseException at runtime
+# (this broke the settings window in v0.7.0). `dotnet build` emits them. The app is
+# framework-dependent (WindowsPackageType=None / WindowsAppSDKSelfContained=false live
+# in the csproj), so the build output is a complete, runnable bundle.
+function Invoke-BuildToServer {
     param(
         [string]$Project,
-        [string]$OutDir
+        [string]$OutDir,
+        [string[]]$ExtraArgs = @()
     )
-    Write-Host "  publish $([System.IO.Path]::GetFileNameWithoutExtension($Project))" -ForegroundColor DarkGray
-    & dotnet publish $Project `
+    Write-Host "  build $([System.IO.Path]::GetFileNameWithoutExtension($Project))" -ForegroundColor DarkGray
+    & dotnet build $Project `
         -c Release `
-        -r $Runtime `
-        --self-contained false `
-        -p:PublishSingleFile=false `
-        -p:WindowsPackageType=None `
-        -p:WindowsAppSDKSelfContained=false `
-        -p:PublishReadyToRun=false `
         -p:Version=$Version `
         -o $OutDir `
         --nologo `
-        -v quiet
+        -v quiet `
+        @ExtraArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "dotnet publish failed for $Project"
+        throw "dotnet build failed for $Project"
     }
 }
 
-# Both projects publish into the SAME server/ directory. Shared DLLs collapse
-# naturally; mismatched versions of the same DLL would surface as a build error,
-# which we want to see rather than silently mask.
-Invoke-Publish -Project $trayProject   -OutDir $serverDir
-Invoke-Publish -Project $bridgeProject -OutDir $serverDir
+# Both projects build into the SAME server/ directory. The tray is x64-only
+# (Platforms=x64); the bridge is AnyCPU. Shared managed DLLs collapse naturally
+# (identical NuGet versions), and the tray's win-x64 native DLLs are untouched by the
+# AnyCPU bridge build.
+Invoke-BuildToServer -Project $trayProject   -OutDir $serverDir -ExtraArgs @('-p:Platform=x64')
+Invoke-BuildToServer -Project $bridgeProject -OutDir $serverDir
 
 # Strip pdb/xml docs to keep both artifacts small.
 Get-ChildItem $serverDir -Recurse -Include *.pdb,*.xml | Remove-Item -Force
