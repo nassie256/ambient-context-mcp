@@ -50,7 +50,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot      = Resolve-Path (Join-Path $PSScriptRoot "..")
 $manifestPath  = Join-Path $repoRoot "mcpb\manifest.json"
-$trayProject   = Join-Path $repoRoot "src\windows\AmbientContextMcp\AmbientContextMcp.csproj"
+$trayProject   = Join-Path $repoRoot "src\windows\AmbientContextMcp.Desktop\AmbientContextMcp.Desktop.csproj"
 $bridgeProject = Join-Path $repoRoot "src\windows\AmbientContextMcp.StdioBridge\AmbientContextMcp.StdioBridge.csproj"
 $distRoot      = Join-Path $repoRoot "dist"
 $staging       = Join-Path $distRoot "release-staging"
@@ -80,6 +80,9 @@ function Invoke-Publish {
         -r $Runtime `
         --self-contained false `
         -p:PublishSingleFile=false `
+        -p:WindowsPackageType=None `
+        -p:WindowsAppSDKSelfContained=false `
+        -p:PublishReadyToRun=false `
         -p:Version=$Version `
         -o $OutDir `
         --nologo `

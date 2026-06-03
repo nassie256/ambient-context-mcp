@@ -71,7 +71,8 @@ claude mcp add ambient-context \
 ## Requirements
 
 - Windows 10 version 2004 (10.0.19041, May 2020 Update) or later
-- .NET 8 Desktop Runtime x64 (only for framework-dependent builds)
+- .NET 8 Runtime + ASP.NET Core 8 Runtime x64 (only for framework-dependent builds)
+- Windows App Runtime 1.8 x64 — if missing, the app guides you to the [download page](https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe) on first launch
 
 ## Build
 
