@@ -68,7 +68,8 @@ claude mcp add ambient-context \
 ## 必要環境
 
 - Windows 10 version 2004 (10.0.19041, May 2020 Update) 以降
-- .NET 8 Desktop Runtime x64 (framework-dependent 配布版の場合)
+- .NET 8 ランタイム + ASP.NET Core 8 ランタイム x64 (framework-dependent 配布版の場合)
+- Windows App Runtime 1.8 x64 — 初回起動時に未導入なら案内され、[ダウンロードページ](https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe) へ誘導されます
 
 ## ビルド
 

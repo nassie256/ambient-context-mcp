@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "ambient-context-mcp",
   "display_name": "Ambient Context MCP",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Expose local Windows ambient context (presence, foreground app category, battery, power events, system load, long-session detection) as privacy-classified MCP tools. All data stays on 127.0.0.1; user opt-in is required for medium/high sensitivity context.",
   "long_description": "Ambient Context MCP is a Windows tray-resident process that publishes the user's local ambient context to MCP clients (Claude Code, Claude Desktop, etc.) via Streamable HTTP on loopback. Sensitivity is classified per-path and medium/high data is gated behind explicit opt-in toggles in the tray UI. This MCPB bundle ships a thin stdio adapter that connects Claude Desktop to the locally-running tray; the tray must be installed and running for the tools to respond.",
   "author": {
