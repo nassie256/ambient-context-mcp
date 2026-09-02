@@ -1,0 +1,161 @@
+{
+  "tools": [
+    {
+      "name": "ambient_context_describe_events",
+      "title": "Describe Ambient Context Event Schemas",
+      "description": "Returns the static event schema catalog: every event name the server can emit, its event-level sensitivity, a human description, and the list of payload keys with their per-key sensitivity and example values. Use this once to learn what to expect from ambient_context_poll_events instead of sniffing live samples. The catalog only changes between releases; cache the result.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "Describe Ambient Context Event Schemas",
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "ambient_context_get_policy",
+      "title": "Get Ambient Context Transmission Policy",
+      "description": "Returns diagnostic metadata about Ambient Context MCP privacy classifications and effective transmission policy. This does not return sensitive context values; it explains which paths are allowed outbound by default or by user override.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "Get Ambient Context Transmission Policy",
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "ambient_context_get_states",
+      "title": "Get Ambient Context States",
+      "description": "Returns the latest ambient context states. The response only includes items that satisfy BOTH (a) the user\u0027s transmission policy and (b) the client-supplied scope filter. The scope is the maximum sensitivity the client declares it can handle; raising it never bypasses the user\u0027s opt-in policy. The response includes a \u0027policyVersion\u0027 hash \u2014 clients can skip calling ambient_context_get_policy until that value changes. Use \u0027context.all:read\u0027 as a shorthand for \u0027I can handle anything the user permits\u0027.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "description": "Optional list of state names to return. Omit or pass an empty list to return all allowed states.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "default": null
+          },
+          "scopes": {
+            "description": "Optional MCP context scopes declaring the maximum sensitivity this client handles: context.low:read, context.medium:read, context.high:read, or context.all:read (alias for high). Default is context.low:read. Raising the scope only widens the response within what the user has already opted in to; it cannot bypass the user\u0027s transmission policy.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "default": null
+          },
+          "includeMetadata": {
+            "description": "Whether to include state metadata such as sensitivity and observed_at.",
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "annotations": {
+        "title": "Get Ambient Context States",
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "ambient_context_poll_events",
+      "title": "Poll Ambient Context Events",
+      "description": "Returns ambient context transition events such as idle/return, AC connect/disconnect, foreground app changes. By default this is a subscription-style call that returns events newer than the client\u0027s stored cursor and advances the cursor. When \u0027since\u0027 or \u0027until\u0027 is provided it becomes a stateless history query within that time range and the client cursor is NOT advanced, so the same range can be re-fetched. Each event also reports per-payload-key sensitivity (\u0027payloadSensitivity\u0027) and the worst-case \u0027maxFieldSensitivity\u0027, so a client can tell at a glance whether raising its scope would reveal more fields. The response includes a \u0027policyVersion\u0027 hash \u2014 clients can skip calling ambient_context_get_policy until that value changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "description": "Stable client identifier for cursor tracking. If omitted, a default MCP client id is used.",
+            "type": "string",
+            "default": "ambient-context-mcp"
+          },
+          "cursor": {
+            "description": "Opaque cursor returned by the previous call. Omit to start at this client\u0027s current position without replaying earlier retained events. When used with since/until it acts as a pagination offset within the time range.",
+            "type": "string",
+            "default": ""
+          },
+          "names": {
+            "description": "Optional list of event names to return. Omit or pass an empty list to return all allowed events.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "default": null
+          },
+          "scopes": {
+            "description": "Optional MCP context scopes: context.low:read, context.medium:read, context.high:read, or context.all:read (alias for high). Higher scopes reveal only medium/high data that the user\u0027s transmission policy already permits. Payload keys above the requested scope are dropped individually while the event itself can still be delivered if its event-level sensitivity is within scope.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "default": null
+          },
+          "limit": {
+            "description": "Maximum number of events to return. Default is 50; server caps at 1000.",
+            "type": "integer",
+            "default": 50
+          },
+          "since": {
+            "description": "Optional ISO 8601 timestamp (e.g. 2026-05-10T00:00:00\u002B09:00). When provided, only events with observedAt \u003E= since are returned, the call becomes a stateless history query (the client cursor is NOT advanced), and an absent client cursor starts at the oldest retained event instead of the latest.",
+            "type": "string",
+            "default": ""
+          },
+          "until": {
+            "description": "Optional ISO 8601 timestamp (e.g. 2026-05-10T23:59:59\u002B09:00). When provided, only events with observedAt \u003C= until are returned; same stateless semantics as \u0027since\u0027.",
+            "type": "string",
+            "default": ""
+          },
+          "includePayload": {
+            "description": "If false, omit \u0027payload\u0027 and \u0027payloadSensitivity\u0027 from each event to reduce response size when scanning large ranges. The event\u0027s id, sequence, observedAt, name, value, sensitivity, and maxFieldSensitivity are preserved. Default true.",
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "annotations": {
+        "title": "Poll Ambient Context Events",
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    }
+  ]
+}

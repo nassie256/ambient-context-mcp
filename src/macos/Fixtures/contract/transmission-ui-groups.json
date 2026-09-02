@@ -1,0 +1,131 @@
+[
+  {
+    "id": "foregroundApp",
+    "options": [
+      {
+        "id": "foreground.identity",
+        "primaryPath": "foregroundApp.category",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "foregroundApp.category",
+          "foregroundApp.appName",
+          "foregroundApp.processName",
+          "events.foreground_changed"
+        ]
+      },
+      {
+        "id": "foreground.titleSummary",
+        "primaryPath": "foregroundApp.titleSummary",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "foregroundApp.titleSummary",
+          "events.foreground_title_changed",
+          "events.foreground_title_changed.titleSummary"
+        ]
+      },
+      {
+        "id": "foreground.rawTitle",
+        "primaryPath": "foregroundApp.rawWindowTitle",
+        "sensitivity": "high",
+        "linkedPaths": [
+          "foregroundApp.rawWindowTitle",
+          "events.foreground_title_changed",
+          "events.foreground_title_changed.raw_window_title"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "activity",
+    "options": [
+      {
+        "id": "activity.switchRate",
+        "primaryPath": "activity.contextSwitchesPerMin",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "activity.contextSwitchesPerMin"
+        ]
+      },
+      {
+        "id": "activity.switchBurst",
+        "primaryPath": "events.context_switch_burst",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "events.context_switch_burst"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "media",
+    "options": [
+      {
+        "id": "media.overview",
+        "primaryPath": "media.isAvailable",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "media.isAvailable",
+          "media.playbackStatus",
+          "media.sourceAppUserModelId",
+          "events.media_playback_started",
+          "events.media_playback_paused",
+          "events.media_session_changed"
+        ]
+      },
+      {
+        "id": "media.title",
+        "primaryPath": "media.title",
+        "sensitivity": "high",
+        "linkedPaths": [
+          "media.title",
+          "events.media_session_changed",
+          "events.media_session_changed.title"
+        ]
+      },
+      {
+        "id": "media.artist",
+        "primaryPath": "media.artist",
+        "sensitivity": "high",
+        "linkedPaths": [
+          "media.artist",
+          "events.media_session_changed",
+          "events.media_session_changed.artist"
+        ]
+      },
+      {
+        "id": "media.album",
+        "primaryPath": "media.albumTitle",
+        "sensitivity": "high",
+        "linkedPaths": [
+          "media.albumTitle",
+          "events.media_session_changed",
+          "events.media_session_changed.album_title"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "environment",
+    "options": [
+      {
+        "id": "environment.timezone",
+        "primaryPath": "system.timeZoneId",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "system.timeZoneId",
+          "events.timezone_changed"
+        ]
+      },
+      {
+        "id": "environment.displays",
+        "primaryPath": "displays",
+        "sensitivity": "medium",
+        "linkedPaths": [
+          "display.count",
+          "displays",
+          "events.display_count_changed"
+        ]
+      }
+    ]
+  }
+]

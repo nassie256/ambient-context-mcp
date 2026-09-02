@@ -1,0 +1,603 @@
+[
+  {
+    "name": "presence_bucket_changed",
+    "sensitivity": "low",
+    "description": "Fires when the presence bucket transitions (active / idle / away_short / away_long / locked).",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous bucket.",
+        "example": "active"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "New bucket.",
+        "example": "idle"
+      }
+    ]
+  },
+  {
+    "name": "user_returned",
+    "sensitivity": "low",
+    "description": "Fires when the user returns to active from idle / away / locked.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous bucket.",
+        "example": "idle"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "Typically \u0022active\u0022.",
+        "example": "active"
+      }
+    ]
+  },
+  {
+    "name": "user_became_idle",
+    "sensitivity": "low",
+    "description": "Fires when active transitions to idle. Useful for suppressing interruptions.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous bucket.",
+        "example": "active"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "Typically \u0022idle\u0022.",
+        "example": "idle"
+      }
+    ]
+  },
+  {
+    "name": "first_activity_today",
+    "sensitivity": "low",
+    "description": "Fires once per local calendar day on the first detection of activity. Persisted across restarts. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "long_session_warning",
+    "sensitivity": "low",
+    "description": "Notifies that continuous active time has exceeded 90 minutes. Useful as a break-suggestion trigger.",
+    "payloadKeys": [
+      {
+        "key": "continuous_active_minutes",
+        "sensitivity": "low",
+        "description": "Continuous active minutes.",
+        "example": "92"
+      }
+    ]
+  },
+  {
+    "name": "session_locked",
+    "sensitivity": "medium",
+    "description": "Fires when the Windows session is locked. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "session_unlocked",
+    "sensitivity": "medium",
+    "description": "Fires when the Windows session is unlocked. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "session_logon",
+    "sensitivity": "medium",
+    "description": "Fires when an OS session starts. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "session_logoff",
+    "sensitivity": "medium",
+    "description": "Fires when an OS session ends. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "foreground_changed",
+    "sensitivity": "medium",
+    "description": "Fires when the foreground app\u0027s process_name or category differs from the last emit. The category_changed flag distinguishes a category transition (replaces the old foreground_app_category_changed event).",
+    "payloadKeys": [
+      {
+        "key": "category",
+        "sensitivity": "medium",
+        "description": "New app\u0027s category (empty string when no data).",
+        "example": "code"
+      },
+      {
+        "key": "app_name",
+        "sensitivity": "medium",
+        "description": "New app\u0027s display name (empty string when no data).",
+        "example": "Visual Studio Code"
+      },
+      {
+        "key": "process_name",
+        "sensitivity": "medium",
+        "description": "New app\u0027s executable name.",
+        "example": "Code.exe"
+      },
+      {
+        "key": "category_changed",
+        "sensitivity": "medium",
+        "description": "\u0022true\u0022 / \u0022false\u0022 relative to the last emit\u0027s category. \u0022false\u0022 when the app changed but stayed within the same category.",
+        "example": "true"
+      }
+    ]
+  },
+  {
+    "name": "foreground_title_changed",
+    "sensitivity": "medium",
+    "description": "Fires when the foreground window title (raw or summary) changes. Tab/file switches within the same app are recorded here. raw_window_title and titleSummary.* require separate opt-in paths.",
+    "payloadKeys": [
+      {
+        "key": "category",
+        "sensitivity": "medium",
+        "description": "Current work category (empty string when no data).",
+        "example": "browser"
+      },
+      {
+        "key": "app_name",
+        "sensitivity": "medium",
+        "description": "Current app display name (empty string when no data).",
+        "example": "Google Chrome"
+      },
+      {
+        "key": "process_name",
+        "sensitivity": "medium",
+        "description": "Current executable name.",
+        "example": "chrome.exe"
+      },
+      {
+        "key": "titleSummary.has_title",
+        "sensitivity": "medium",
+        "description": "\u0022true\u0022 when a title is present.",
+        "example": "true"
+      },
+      {
+        "key": "titleSummary.file_ext",
+        "sensitivity": "medium",
+        "description": "Inferred file extension (editor category, etc.).",
+        "example": "cs"
+      },
+      {
+        "key": "titleSummary.known_site",
+        "sensitivity": "medium",
+        "description": "Known site name (browser category).",
+        "example": "github.com"
+      },
+      {
+        "key": "raw_window_title",
+        "sensitivity": "high",
+        "description": "Raw window title. Page names, file names, DM partners, search queries, etc.",
+        "example": "Program.cs - MyProject - Visual Studio"
+      }
+    ]
+  },
+  {
+    "name": "battery_medium",
+    "sensitivity": "low",
+    "description": "Fires when battery level enters the medium bucket (20\u201350%).",
+    "payloadKeys": [
+      {
+        "key": "percent",
+        "sensitivity": "low",
+        "description": "Current battery percent (may be \u0022unknown\u0022).",
+        "example": "47"
+      }
+    ]
+  },
+  {
+    "name": "battery_low",
+    "sensitivity": "low",
+    "description": "Fires when battery level enters the low bucket (10\u201320%).",
+    "payloadKeys": [
+      {
+        "key": "percent",
+        "sensitivity": "low",
+        "description": "Current battery percent.",
+        "example": "18"
+      }
+    ]
+  },
+  {
+    "name": "battery_critical",
+    "sensitivity": "low",
+    "description": "Fires when battery level enters the critical bucket (\u003C10%).",
+    "payloadKeys": [
+      {
+        "key": "percent",
+        "sensitivity": "low",
+        "description": "Current battery percent.",
+        "example": "8"
+      }
+    ]
+  },
+  {
+    "name": "battery_percent_crossed_threshold",
+    "sensitivity": "low",
+    "description": "Fires when battery percent crosses one of the 80 / 50 / 30 / 20 thresholds.",
+    "payloadKeys": [
+      {
+        "key": "threshold",
+        "sensitivity": "low",
+        "description": "The crossed threshold.",
+        "example": "30"
+      },
+      {
+        "key": "direction",
+        "sensitivity": "low",
+        "description": "\u0022up\u0022 or \u0022down\u0022.",
+        "example": "down"
+      },
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous battery percent.",
+        "example": "31"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "Current battery percent.",
+        "example": "29"
+      }
+    ]
+  },
+  {
+    "name": "charger_connected",
+    "sensitivity": "low",
+    "description": "Fires when the charger is connected. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "charger_disconnected",
+    "sensitivity": "low",
+    "description": "Fires when the charger is disconnected. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "power_source_changed",
+    "sensitivity": "low",
+    "description": "Fires on AC / battery / short_term power source transitions.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous power source (\u0022unknown\u0022 on first observation).",
+        "example": "battery"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "New power source.",
+        "example": "ac"
+      }
+    ]
+  },
+  {
+    "name": "ac_power_connected",
+    "sensitivity": "low",
+    "description": "Fires when AC power becomes the source, paired with power_source_changed.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous power source (\u0022unknown\u0022 on first observation).",
+        "example": "battery"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022ac\u0022.",
+        "example": "ac"
+      }
+    ]
+  },
+  {
+    "name": "battery_power_active",
+    "sensitivity": "low",
+    "description": "Fires when battery becomes the active power source.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous power source (\u0022unknown\u0022 on first observation).",
+        "example": "ac"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022battery\u0022.",
+        "example": "battery"
+      }
+    ]
+  },
+  {
+    "name": "short_term_power_active",
+    "sensitivity": "low",
+    "description": "Fires when a short-term power source (e.g. UPS) becomes active.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "Previous power source (\u0022unknown\u0022 on first observation).",
+        "example": "ac"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022short_term\u0022.",
+        "example": "short_term"
+      }
+    ]
+  },
+  {
+    "name": "power_setting_changed",
+    "sensitivity": "low",
+    "description": "Notification of a Windows power setting change (AC/DC source, monitor power, lid switch, etc).",
+    "payloadKeys": [
+      {
+        "key": "setting",
+        "sensitivity": "low",
+        "description": "Setting name (e.g. ac_dc_power_source, monitor_power_on).",
+        "example": "monitor_power_on"
+      },
+      {
+        "key": "guid",
+        "sensitivity": "low",
+        "description": "Windows GUID.",
+        "example": "02731015-4510-4526-99e6-e5a17ebd1aea"
+      },
+      {
+        "key": "value",
+        "sensitivity": "low",
+        "description": "Formatted value (e.g. \u0022on\u0022 / \u0022off\u0022).",
+        "example": "on"
+      },
+      {
+        "key": "raw_value",
+        "sensitivity": "low",
+        "description": "Raw integer value.",
+        "example": "1"
+      },
+      {
+        "key": "data_length",
+        "sensitivity": "low",
+        "description": "Payload byte length.",
+        "example": "4"
+      }
+    ]
+  },
+  {
+    "name": "system_suspend",
+    "sensitivity": "low",
+    "description": "Fires when the system begins suspending. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "system_resume_user",
+    "sensitivity": "low",
+    "description": "Fires on user-initiated resume from sleep. No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "system_resume_automatic",
+    "sensitivity": "low",
+    "description": "Fires on automatic resume from sleep (timer, Wake-on-LAN, etc). No payload.",
+    "payloadKeys": []
+  },
+  {
+    "name": "system_under_load",
+    "sensitivity": "low",
+    "description": "Fires when CPU or memory pressure reaches high or above.",
+    "payloadKeys": [
+      {
+        "key": "cpu_pressure",
+        "sensitivity": "low",
+        "description": "CPU pressure bucket (e.g. high / critical).",
+        "example": "high"
+      },
+      {
+        "key": "memory_pressure",
+        "sensitivity": "low",
+        "description": "Memory pressure bucket.",
+        "example": "moderate"
+      }
+    ]
+  },
+  {
+    "name": "context_switch_burst",
+    "sensitivity": "medium",
+    "description": "Fires when app-switch frequency spikes within a short window. Hints at work rhythm.",
+    "payloadKeys": [
+      {
+        "key": "switches_per_min",
+        "sensitivity": "medium",
+        "description": "Number of switches in the last minute.",
+        "example": "42"
+      }
+    ]
+  },
+  {
+    "name": "media_session_changed",
+    "sensitivity": "medium",
+    "description": "Fires when SMTC media session details change. title / artist are classified high under separate paths and require both user opt-in and context.high:read scope.",
+    "payloadKeys": [
+      {
+        "key": "source_app",
+        "sensitivity": "medium",
+        "description": "AppUserModelId of the source app (e.g. Spotify, a Chrome tab).",
+        "example": "Spotify.exe"
+      },
+      {
+        "key": "source_kind",
+        "sensitivity": "medium",
+        "description": "Coarse media kind inferred from source_app: \u0022music\u0022 / \u0022video\u0022 / \u0022browser\u0022 / \u0022unknown\u0022. Browser is its own category since tab contents can\u0027t be inspected. Heuristic \u2014 misclassification is possible.",
+        "example": "music"
+      },
+      {
+        "key": "playback_status",
+        "sensitivity": "medium",
+        "description": "Playing / Paused / Stopped.",
+        "example": "Playing"
+      },
+      {
+        "key": "title",
+        "sensitivity": "high",
+        "description": "Track / video title. Reveals listening / viewing history.",
+        "example": "Imagine"
+      },
+      {
+        "key": "artist",
+        "sensitivity": "high",
+        "description": "Artist or performer.",
+        "example": "John Lennon"
+      },
+      {
+        "key": "album_title",
+        "sensitivity": "high",
+        "description": "Album title.",
+        "example": "Double Fantasy"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_started",
+    "sensitivity": "medium",
+    "description": "Fires when media transitions to Playing.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "Previous PlaybackStatus.",
+        "example": "Paused"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u0022Playing\u0022.",
+        "example": "Playing"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_paused",
+    "sensitivity": "medium",
+    "description": "Fires when media transitions to Paused.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "Previous PlaybackStatus.",
+        "example": "Playing"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u0022Paused\u0022.",
+        "example": "Paused"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_stopped",
+    "sensitivity": "medium",
+    "description": "Fires when media transitions to Stopped.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "Previous PlaybackStatus.",
+        "example": "Playing"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u0022Stopped\u0022.",
+        "example": "Stopped"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_status_changed",
+    "sensitivity": "medium",
+    "description": "Generic event when PlaybackStatus moves to a value other than Playing / Paused / Stopped (e.g. Buffering).",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "Previous PlaybackStatus.",
+        "example": "Playing"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "New PlaybackStatus.",
+        "example": "Buffering"
+      }
+    ]
+  },
+  {
+    "name": "network_connectivity_changed",
+    "sensitivity": "low",
+    "description": "Fires on network online / offline transition.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u0022online\u0022 or \u0022offline\u0022.",
+        "example": "offline"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022online\u0022 or \u0022offline\u0022.",
+        "example": "online"
+      }
+    ]
+  },
+  {
+    "name": "timezone_changed",
+    "sensitivity": "medium",
+    "description": "Fires when the time zone ID changes. Suggests travel or a settings change.",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "Previous IANA / Windows TZ ID.",
+        "example": "Tokyo Standard Time"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "New TZ ID.",
+        "example": "Pacific Standard Time"
+      }
+    ]
+  },
+  {
+    "name": "display_count_changed",
+    "sensitivity": "medium",
+    "description": "Fires when the number of displays changes (external monitor connect / disconnect).",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "Previous display count.",
+        "example": "1"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "New display count.",
+        "example": "2"
+      }
+    ]
+  }
+]

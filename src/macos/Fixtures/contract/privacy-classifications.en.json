@@ -1,0 +1,428 @@
+[
+  {
+    "path": "presence.bucket",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse-grained presence (active/idle/away). Useful for proactive prompts and notification timing."
+  },
+  {
+    "path": "presence.idleSeconds",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Reveals fine-grained work rhythm; opt-in only."
+  },
+  {
+    "path": "presence.sessionLocked",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Implies away/return state; opt-in only."
+  },
+  {
+    "path": "events.presence_bucket_changed",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse presence transition. More useful as a proactive trigger than as a state value."
+  },
+  {
+    "path": "events.user_returned",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event aligned with return-to-work prompts."
+  },
+  {
+    "path": "events.user_became_idle",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event useful for suppressing interruptions."
+  },
+  {
+    "path": "events.session_locked",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Indicates an away state; opt-in only."
+  },
+  {
+    "path": "events.session_unlocked",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Indicates a return-to-work state; opt-in only."
+  },
+  {
+    "path": "events.session_logon",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Indicates an OS session start; opt-in only."
+  },
+  {
+    "path": "events.session_logoff",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Indicates an OS session end; opt-in only."
+  },
+  {
+    "path": "foregroundApp.category",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Helpful for inferring task category, but can become an activity log."
+  },
+  {
+    "path": "foregroundApp.appName",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "The app name in use hints at what the user is working on."
+  },
+  {
+    "path": "foregroundApp.processName",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Useful as an app identifier, but reveals details of the user\u0027s environment."
+  },
+  {
+    "path": "foregroundApp.rawWindowTitle",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Easily leaks page titles, file names, DM partners, or search queries. Off by default."
+  },
+  {
+    "path": "foregroundApp.titleSummary",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Less sensitive than the raw title, but known site names or file extensions can still hint at activity."
+  },
+  {
+    "path": "events.foreground_title_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Timing signal when the window title changes, e.g. tab or file switches within the same app."
+  },
+  {
+    "path": "events.foreground_title_changed.titleSummary",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Title summary (file extension, known site, etc.). History-side opt-in paired with state path foregroundApp.titleSummary."
+  },
+  {
+    "path": "events.foreground_title_changed.raw_window_title",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Page titles, file names, DM partners, search queries, etc. History-side opt-in paired with state path foregroundApp.rawWindowTitle."
+  },
+  {
+    "path": "events.foreground_app_category_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "[Deprecated] Merged into foreground_changed\u0027s category_changed flag. This event no longer fires. See ambient_context_describe_events for the active event list."
+  },
+  {
+    "path": "activity.contextSwitchesPerMin",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "App switch frequency reveals work rhythm; opt-in only."
+  },
+  {
+    "path": "events.context_switch_burst",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "A burst of short-interval app switches. Opt-in because it forms a work-rhythm log."
+  },
+  {
+    "path": "battery.bucket",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Useful for low-power alerts; not personally identifying."
+  },
+  {
+    "path": "battery.percent",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Useful as power context; low sensitivity on its own."
+  },
+  {
+    "path": "battery.charging",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Useful for charge-start/stop events."
+  },
+  {
+    "path": "events.battery_percent_crossed_threshold",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Crossing the 80 / 50 / 30 / 20 % thresholds. Useful as a prompt trigger."
+  },
+  {
+    "path": "events.battery_medium",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating battery has dropped to a medium level."
+  },
+  {
+    "path": "events.battery_low",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event useful for low-power alerts."
+  },
+  {
+    "path": "events.battery_critical",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event useful for avoiding power loss."
+  },
+  {
+    "path": "events.charger_connected",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating charging has started."
+  },
+  {
+    "path": "events.charger_disconnected",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating charging has stopped."
+  },
+  {
+    "path": "power.lastKnownSettings",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "AC/DC, display state, power-save state, etc. Useful as a prompt trigger; low sensitivity."
+  },
+  {
+    "path": "events.power_setting_changed",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse changes in power state such as AC/DC or display power."
+  },
+  {
+    "path": "events.power_source_changed",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Transition between AC and battery operation. More useful as a prompt trigger than as a state value."
+  },
+  {
+    "path": "events.ac_power_connected",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating the power cable was plugged in."
+  },
+  {
+    "path": "events.battery_power_active",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating a switch to battery operation."
+  },
+  {
+    "path": "events.short_term_power_active",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating a short-term power state."
+  },
+  {
+    "path": "events.system_suspend",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating sleep has started."
+  },
+  {
+    "path": "events.system_resume_user",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating user-driven resume."
+  },
+  {
+    "path": "events.system_resume_automatic",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating an automatic resume."
+  },
+  {
+    "path": "network.isAvailable",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Online / offline status only."
+  },
+  {
+    "path": "events.network_connectivity_changed",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Online / offline transition. Useful for sync and reconnect notices."
+  },
+  {
+    "path": "media.isAvailable",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Whether a media session exists can become activity context; opt-in only."
+  },
+  {
+    "path": "media.playbackStatus",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Whether media is playing helps with interruption control, but is still activity context."
+  },
+  {
+    "path": "media.sourceAppUserModelId",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "The app the media is coming from. Hints at which music or video service is in use."
+  },
+  {
+    "path": "media.title",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Track / video / stream titles directly reveal preferences and viewed content."
+  },
+  {
+    "path": "media.artist",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Directly tied to user taste; off by default."
+  },
+  {
+    "path": "media.albumTitle",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Directly tied to user taste; off by default."
+  },
+  {
+    "path": "media.positionMilliseconds",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Low sensitivity on its own, but accumulates into a viewing-behavior log."
+  },
+  {
+    "path": "media.sessions",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Contains multiple apps\u0027 playback candidates and titles; off by default outside diagnostics."
+  },
+  {
+    "path": "events.media_playback_started",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Playback start. Even without a title it is still activity context; opt-in only."
+  },
+  {
+    "path": "events.media_playback_paused",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Playback paused. Useful for interruption control; opt-in only."
+  },
+  {
+    "path": "events.media_playback_stopped",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Playback stopped. Useful for interruption control; opt-in only."
+  },
+  {
+    "path": "events.media_playback_status_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Playback state change. Useful for interruption control; opt-in only."
+  },
+  {
+    "path": "events.media_session_changed.title",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Track / video / stream title. A viewing history in itself; per-key opt-in recommended."
+  },
+  {
+    "path": "events.media_session_changed.artist",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Artist or performer. A viewing history in itself; per-key opt-in recommended."
+  },
+  {
+    "path": "events.media_session_changed.album_title",
+    "sensitivity": "high",
+    "defaultTransmit": false,
+    "reason": "Album title. Directly tied to user taste; history-side opt-in paired with state path media.albumTitle."
+  },
+  {
+    "path": "system.timeZoneId",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Can imply the user\u0027s region. Time-of-day greetings can be handled locally."
+  },
+  {
+    "path": "system.uptimeSeconds",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity coarse uptime; useful for distinguishing fresh boot from long-running."
+  },
+  {
+    "path": "system.cpuPressureBucket",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse CPU load; useful for deciding when to run heavy work."
+  },
+  {
+    "path": "system.memoryPressureBucket",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse memory pressure; useful for deciding when to run heavy work."
+  },
+  {
+    "path": "wellness.continuousActiveMinutes",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse continuous-active duration; useful for long-session alerts."
+  },
+  {
+    "path": "wellness.minutesSinceLastBreak",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse time-since-break; useful for suggesting a rest."
+  },
+  {
+    "path": "events.system_under_load",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Coarse event indicating high system load."
+  },
+  {
+    "path": "events.long_session_warning",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Long-session warning event."
+  },
+  {
+    "path": "events.first_activity_today",
+    "sensitivity": "low",
+    "defaultTransmit": true,
+    "reason": "Low-sensitivity event indicating first activity of the day."
+  },
+  {
+    "path": "display.count",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Implies whether an external display is connected; opt-in only."
+  },
+  {
+    "path": "displays",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Workspace topology info. UI placement can be handled locally."
+  },
+  {
+    "path": "events.timezone_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Indicates travel or environment change, but implies region."
+  },
+  {
+    "path": "events.display_count_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "External monitor connect / disconnect. Workspace info; opt-in only."
+  },
+  {
+    "path": "events.foreground_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "App switch frequency reveals work rhythm."
+  },
+  {
+    "path": "events.media_session_changed",
+    "sensitivity": "medium",
+    "defaultTransmit": false,
+    "reason": "Timing signal at the moment a track changes. Title / artist require separate opt-in via the .title / .artist paths."
+  }
+]
