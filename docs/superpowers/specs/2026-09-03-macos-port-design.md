@@ -193,6 +193,23 @@ Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可�
 - **契約フィクスチャ**: C# 側に小さなダンプ用テスト (または `dotnet run` スクリプト) を追加し、`GetPrivacyClassifications()` / `GetEventSchemas()` / `GetTransmissionUiGroups()` / `tools/list` を `src/macos/Fixtures/contract/*.json` に出力してコミット。Swift テストで同一性を検証。将来的にはこの JSON を両実装の単一ソースにする案 (§6) がある
 - カタログ文言の「Windows SMTC」「Windows セッション」など OS 固有表現は Swift 側で中立化し、C# 側も同じ文言に揃える小 PR を併せて出す (drift を作らないため)
 
+#### Phase 1 結果 (2026-09-03 完了)
+
+- `src/macos/Package.swift` + `AmbientContextCore` + `AmbientContextCoreTests` (Swift Testing 70 テスト / 16 スイート)。C# 側は `ContractFixturesTests.cs` がフィクスチャ 9 件を `src/macos/Fixtures/contract/` に冪等出力する (C# 71 テスト)
+- CLT のみの環境では `swift test` が `Testing.framework` を見つけられないため `src/macos/scripts/run-tests.sh` を使う (Xcode がある CI では素の `swift test` で可)
+- `tools/list` の `inputSchema` フィクスチャは MCP SDK のリフレクション (`McpServerTool.Create` + `IServiceProviderIsService`) で生成。nullable 引数は `type: ["array","null"]` + `default: null` になる
+- C# からの意図的な逸脱 (契約上は同値):
+  | 項目 | C# | Swift |
+  |---|---|---|
+  | 日時の小数桁 | 可変 (末尾 0 を省略) | 常に 3 桁、オフセットは常に `±HH:MM` |
+  | 非 ASCII の JSON エスケープ | `\uXXXX` | 生 UTF-8 (値は同一) |
+  | 大文字小文字無視の比較 | OrdinalIgnoreCase | `lowercased()` (カタログ path は ASCII のみ) |
+  | 診断ログのスレッド情報 | `threadId` + `threadName` | `thread` 1 フィールド |
+  | `snapshot.source` | `windows-desktop` | `macos-desktop` |
+  | カタログ言語 | `CurrentUICulture` | 明示 `language:` 引数 (既定は `Locale.preferredLanguages`) |
+  | `ArgumentException` | 例外 | `ContextToolsError.invalidArgument` (メッセージは同一) |
+- カタログ文言の「Windows SMTC」等はフィクスチャ一致のため**そのまま**。中立化は C# 側 PR + フィクスチャ再生成とセットで別途行う
+
 ### Phase 2: MCP サーバ + 設定ストア
 
 - `AmbientContextMcpServer`: Hummingbird ホスト、認証ミドルウェア、4 ツール、discovery ファイル、`McpClientSnippets`
