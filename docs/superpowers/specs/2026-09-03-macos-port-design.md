@@ -216,6 +216,25 @@ Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可�
 - `JsonFileSettingsStore` 移植 (トークン生成は 32 byte → base64url、同じ)
 - `curl` と Claude Code で疎通確認
 
+#### Phase 2 結果 (2026-09-03 完了)
+
+- `AmbientContextMcpServer` ライブラリ + `ambient-mcp-dev` CLI + 28 テスト。Core の公開面は無変更
+- 依存: swift-sdk `exact 0.12.1`、swift-nio `from 2.102.0` (swift-sdk が解決する版)
+- `GET /mcp` は**未認証なら 401 が先**、認証済みなら 405 + `Allow: POST` + JSON-RPC `-32600` 本文。`/mcp` 配下以外は認証なしで 404
+- トークンは毎リクエスト closure で読む (`reloadSettings()` 後の再生成が即反映)。ポート変更はリスナ再起動が必要 (Windows と同じ「再起動後に反映」)
+- bind 失敗は `McpHttpServer.StartError.bindFailed(host:port:)` として Phase 4 の致命ダイアログに渡す
+- `Server.Info.version` は定数 (`0.7.1`)。リリース時に `mcpb/manifest.json` と同時に更新する
+- Foundation の `JSONEncoder` は構造体のキー順を保証しない (契約上は名前参照のみなので問題なし。Phase 1 の逸脱表に追加)
+- DNS rebinding 対策としての `Host` ヘッダ検査は Windows 同様に未実装 (両実装で揃えて検討する論点として残す)
+
+#### Phase 3a 結果 (2026-09-03 完了)
+
+- `AmbientContextCore/Engine/` に Tier1Rules / Projector / TransitionEvaluator / AmbientSnapshotBuilder、47 テスト
+- `AppClassificationTable.windows` (27 行、C# と同一) と `.macOS` (46 行、bundle id を大文字小文字無視で照合)。`TitleSummaryRules.windows` / `.macOS` (zsh / bash / fish / ssh)
+- 発火イベント名の集合はカタログ 35 件と**完全一致**することをテストで固定 (init-only の `ambient_monitor_attached` / `power_settings_initialized` はカタログ外であることも固定)
+- `TransitionEvaluator` はスレッド安全でない (呼び出し側の actor で直列化)。`persistLastActivityDate` は closure 注入、`now` は注入可能
+- 決定事項: `power_settings_initialized` の期待件数は呼び出し側が「実際に購読できたソース数」を渡す。bundle id が空のプロセスは `("", "")` (必要なら `("other", 実行ファイル名)` に変更可、1 行)。`system_resume_automatic` は契約互換のため enum に残すが mac では発火しない
+
 ### Phase 3: Collector とエンジン
 
 - `Engine/TransitionEvaluator` 移植 + テスト
