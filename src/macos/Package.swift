@@ -4,9 +4,9 @@ import PackageDescription
 // macOS 版 ambient-context-mcp のパッケージ定義。
 // Phase 2 までで Core ライブラリ + MCP サーバライブラリ (と開発用 CLI) を定義する。
 //
-// TODO(Phase 4): executable target "AmbientContextMac" (.app 本体、NSStatusItem / SwiftUI 設定ウィンドウ /
-//                Collector 群) を追加する。Resources と ja.lproj / en.lproj もここにぶら下げる。
-// TODO(Phase 5): executable target "ambient-mcp-stdio" (StdioBridge の Swift 移植) を追加する。
+// Phase 3b/4: executable target "AmbientContextMac" (.app 本体: Collector / Service / NSStatusItem /
+//             SwiftUI 設定ウィンドウ)。Resources (ja.lproj / en.lproj, アイコン) もここにぶら下げる。
+// Phase 5:    executable target "ambient-mcp-stdio" (StdioBridge の Swift 移植)。
 let package = Package(
     name: "AmbientContextMcp",
     defaultLocalization: "en",
@@ -45,6 +45,27 @@ let package = Package(
             name: "ambient-mcp-dev",
             dependencies: ["AmbientContextCore", "AmbientContextMcpServer"],
             path: "Sources/ambient-mcp-dev",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        // .app 本体。Bundle 組立は scripts/build-app.sh が行う (SwiftPM の生成する Bundle.module は使わない)。
+        .executableTarget(
+            name: "AmbientContextMac",
+            dependencies: ["AmbientContextCore", "AmbientContextMcpServer"],
+            path: "Sources/AmbientContextMac",
+            exclude: ["Resources"],
+            swiftSettings: [.swiftLanguageMode(.v6)],
+            linkerSettings: [
+                .linkedFramework("AppKit"),
+                .linkedFramework("SwiftUI"),
+                .linkedFramework("IOKit"),
+                .linkedFramework("ServiceManagement"),
+                .linkedFramework("ApplicationServices")
+            ]
+        ),
+        // Claude Desktop (MCPB) 用 stdio→HTTP シム。Foundation のみ。
+        .executableTarget(
+            name: "ambient-mcp-stdio",
+            path: "Sources/ambient-mcp-stdio",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
