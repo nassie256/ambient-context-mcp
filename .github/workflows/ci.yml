@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    # OS 非依存の Core (net8.0) テストと、契約フィクスチャの drift 検出 (設計書 §5)。
+    # ContractFixturesTests が src/macos/Fixtures/contract/*.json を冪等に再生成するので、
+    # C# 側だけを変更して Swift 側を更新し忘れた PR は git diff で落ちる。
+    name: Core tests + contract fixtures
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: dotnet test (Core)
+        run: dotnet test src/windows/AmbientContextMcp.Core.Tests/AmbientContextMcp.Core.Tests.csproj -c Release --nologo
+
+      - name: Contract fixtures are up to date
+        run: |
+          git diff --exit-code -- src/macos/Fixtures/contract \
+            || {
+              echo "::error::src/macos/Fixtures/contract is out of date. Run the Core tests locally and commit the regenerated fixtures."
+              exit 1
+            }
+
+  macos-swift:
+    name: Swift build + test (macOS)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: swift --version
+        run: swift --version
+
+      - name: swift build
+        working-directory: src/macos
+        run: swift build
+
+      - name: swift test
+        working-directory: src/macos
+        # Xcode 入りランナーなので素の `swift test` で通る。CLT のみの開発機では
+        # scripts/run-tests.sh (Testing.framework の -F / -rpath を足す) を使う。
+        run: swift test

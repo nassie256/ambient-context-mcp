@@ -4,7 +4,21 @@ Ambient Context MCP は Streamable HTTP transport で動作します。`http://1
 
 ## トークンの取得
 
-トレイメニュー、または設定ダイアログから `Claude Code 用設定をコピー` 押下でクライアント設定コマンドが丸ごとクリップボードに入ります。手動で取得する場合は `%LOCALAPPDATA%\AmbientContextMcp\settings.json` の `mcpServer.token` を参照してください。
+トレイメニュー (Windows) / メニューバーの右クリックメニュー (macOS)、または設定ウィンドウから `Claude Code 用設定をコピー` 押下でクライアント設定コマンドが丸ごとクリップボードに入ります。
+
+手動で取得する場合は設定ファイルの `mcpServer.token` を参照してください。
+
+| OS | 設定ファイル |
+|---|---|
+| Windows | `%LOCALAPPDATA%\AmbientContextMcp\settings.json` |
+| macOS | `~/Library/Application Support/AmbientContextMcp/settings.json` |
+
+同じディレクトリに、起動中の MCP の discovery 情報 `mcp-api.json` (エンドポイントとトークン。終了時に削除) も置かれます。
+
+```bash
+# macOS: トークンだけを取り出す
+python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/Library/Application Support/AmbientContextMcp/settings.json")))["mcpServer"]["token"])'
+```
 
 ## Claude Code
 
@@ -23,7 +37,14 @@ claude mcp list
 
 ## Claude Desktop
 
-`%APPDATA%\Claude\claude_desktop_config.json` に追加:
+設定ファイルの場所:
+
+| OS | パス |
+|---|---|
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+
+次を追加します:
 
 ```json
 {
@@ -41,7 +62,7 @@ claude mcp list
 
 ## その他 stdio クライアント
 
-Streamable HTTP のみ提供のため、stdio 専用クライアントには **stdio bridge を別途用意するまで対応していません** (v0.2 で予定)。
+配布物には stdio→HTTP のブリッジ (`ambient-mcp-stdio.exe` / macOS は `ambient-mcp-stdio`) が同梱されています。`.mcpb` を Claude Desktop に入れる場合は自動的にこれが使われますが、任意の stdio クライアントから直接起動することもできます。ブリッジは discovery ファイルを読み、本体が未起動なら同じディレクトリの本体 (macOS では `Ambient Context MCP.app`) を spawn してから JSON-RPC を中継します。
 
 ## 利用例
 
