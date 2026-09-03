@@ -110,6 +110,7 @@ Both builds expose the same MCP contract, but the underlying OS APIs differ:
 | `foregroundApp.processName` | `code.exe` | `Code` (no extension); app classification keys off the bundle id |
 | `network.interfaceKinds` | Always empty | Can report wifi / wired / cellular |
 | Media `albumArtist` / `trackNumber` / `genres` | Available | Not available (empty / 0) |
+| While the settings window is open | No Dock icon | A Dock icon appears (disappears on close; needed so the window is reachable through the Accessibility API) |
 | Unsigned distribution | SmartScreen warning | Blocked by Gatekeeper (macOS 15+ also blocks right-click → Open). Move to `/Applications`, then "Open Anyway" or remove the quarantine attribute |
 | Permissions across updates | Preserved | Ad-hoc signing changes the cdhash, so Accessibility / Automation grants are voided on every update (no re-prompt); remove and re-add the app in System Settings |
 

@@ -107,6 +107,7 @@ Windows 版と macOS 版は同じ MCP 契約を提供しますが、OS の API �
 | `foregroundApp.processName` | `code.exe` | `Code` (拡張子なし)。アプリ分類は bundle id で行う |
 | `network.interfaceKinds` | 常に空 | wifi / wired / cellular を返せる |
 | メディアの `albumArtist` / `trackNumber` / `genres` | 取得可 | 取得不可 (空 / 0) |
+| 設定ウィンドウ表示中 | Dock アイコンなし | Dock にアイコンが出る (ウィンドウを閉じると消える。Accessibility API から到達可能にするため) |
 | 未署名配布 | SmartScreen 警告 | Gatekeeper でブロック (macOS 15 以降は右クリック → 開くも不可)。`/Applications` へ移動後に「このまま開く」または quarantine 属性の削除が必要 |
 | 更新時の権限 | 維持される | ad-hoc 署名のため cdhash が変わり、アクセシビリティ / オートメーションの許可が無効化される (再プロンプト無し)。システム設定で削除 → 再追加が必要 |
 

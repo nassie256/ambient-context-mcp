@@ -1,7 +1,7 @@
 # macOS ネイティブ移植 設計・実装計画
 
 - 作成日: 2026-09-03
-- ステータス: Phase 0〜5 実装完了 (2026-09-03)、Phase 6 (同等性検証・後回し項目) 進行中。PoC の生データは `docs/superpowers/poc-results/`
+- ステータス: Phase 0〜6 完了 (2026-09-03)。残りは人手が必要な確認項目 (§7.1) のみ。PoC の生データは `docs/superpowers/poc-results/`
 - 対象範囲: `src/macos/` に macOS ネイティブ (Swift / AppKit / SwiftUI) のメニューバー常駐アプリを新設し、Windows 版 (`src/windows/`) と可能な限り同等の機能・MCP 契約を提供する
 
 ## 1. 現行 Windows 版の構造 (調査結果)
@@ -333,6 +333,12 @@ Windows 版と macOS 版は別実装になるため、以下を CI で機械的�
 2. **中**: 設定ウィンドウが Accessibility API から見えない (`AXWindow` が列挙されない)
 3. **低**: `includePayload=false` で `payload` / `payloadSensitivity` が省略されず `{}` になる。Windows も同じ挙動で `docs/tool-spec.md` との不一致 (文書側を修正)
 
+### 7.2 Phase 6 の結果 (2026-09-03)
+
+- パリティ整理: カタログ文言の OS 中立化と `MediaSourceKindClassifier` の bundle id 追加を C# / Swift 同時に適用、フィクスチャ再生成 (C# 78 / Swift 155 テスト)
+- コードレビュー 13 件 + パッケージング/ブリッジ 6 件のうち、Hub のロック中 I/O (C# と同構造) と ad-hoc 署名による TCC 失効 (Developer ID が無い限り解決不能、文書化) を除きすべて修正
+- 受け入れバグ 3 件を修正: Collector を actor 外で有界化 (media 2.5 s / foreground・display 2 s、超過時は直前値)、`beginActivity(.background)` + `NSAppSleepDisabled`、設定ウィンドウ表示中のみ activation policy を `.regular` に切替 (Dock アイコンが出る)。`includePayload=false` は文書側を「空オブジェクト」に修正
+- 残課題: SwiftUI コントロールに `accessibilityLabel` が無く名前指定の AX 操作ができない (index 指定は可)。ツール説明文の "omit" は Windows とのフィクスチャ一致のため据え置き
 ## 8. 既知の機能差 (ユーザ向けに明記するもの)
 
 | 項目 | Windows | macOS |
