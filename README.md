@@ -46,6 +46,8 @@ Windows / macOS のローカル ambient context (在席状態、フォアグラ�
 
 > **macOS の注意**: 同梱アプリは ad-hoc 署名 (Apple Developer Program 未加入) のため、初回のみ Gatekeeper に許可を与える必要があります。ツールが応答しない場合は、システム設定 → プライバシーとセキュリティ の「このまま開く」を押してください。
 
+> **アップデート時の注意 (macOS)**: ad-hoc 署名では designated requirement が cdhash だけになるため、アプリを更新すると**アクセシビリティ / オートメーションの許可が無効化されます**。しかも再プロンプトは出ないので、権限が必要な context (ウィンドウタイトル / メディア) が黙って空になります。更新後は システム設定 → プライバシーとセキュリティ → アクセシビリティ / オートメーション で古いエントリを **削除してから追加し直して** ください。Developer ID 署名にすれば解消しますが、現状は使用していません。
+
 ### B. Claude Code / その他クライアント (Streamable HTTP)
 
 #### Windows
@@ -68,7 +70,7 @@ claude mcp add ambient-context \
 
 #### macOS
 
-`ambient-context-mcp-vX.Y.Z-macos-universal.zip` (または `.dmg`) をダウンロードします。
+`ambient-context-mcp-vX.Y.Z-macos-universal.zip` (または `.dmg`) をダウンロードします (リリースは universal binary。`scripts/package-release.sh --arch arm64` などで自作した場合はファイル名の `universal` がそのアーキ名になります)。
 
 1. 展開して **`Ambient Context MCP.app` を先に `/Applications` へ移動**します
    (移動せずに開くと App Translocation により読み取り専用の一時パスで実行され、discovery ファイルやログイン項目のパスが壊れます)
@@ -106,6 +108,7 @@ Windows 版と macOS 版は同じ MCP 契約を提供しますが、OS の API �
 | `network.interfaceKinds` | 常に空 | wifi / wired / cellular を返せる |
 | メディアの `albumArtist` / `trackNumber` / `genres` | 取得可 | 取得不可 (空 / 0) |
 | 未署名配布 | SmartScreen 警告 | Gatekeeper でブロック (macOS 15 以降は右クリック → 開くも不可)。`/Applications` へ移動後に「このまま開く」または quarantine 属性の削除が必要 |
+| 更新時の権限 | 維持される | ad-hoc 署名のため cdhash が変わり、アクセシビリティ / オートメーションの許可が無効化される (再プロンプト無し)。システム設定で削除 → 再追加が必要 |
 
 ## ドキュメント
 

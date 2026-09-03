@@ -31,8 +31,21 @@ enum Bridge {
         }
     }
 
+    /// 開発 / テスト用の環境変数上書きが効いていることを stderr に明示する。
+    /// 上書きは常時有効なので、意図しない環境で黙って別の上流に繋がることを防ぐ。
+    static func logActiveOverrides(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
+        for name in ["AMBIENT_MCP_DISCOVERY_PATH", "AMBIENT_MCP_APP_PATH"] {
+            if let value = environment[name], !value.isEmpty {
+                logToStderr("using override \(name) = \(value)")
+            }
+        }
+    }
+
     /// discovery ファイルが健全ならそれを返し、駄目なら同梱トレイを起動して待つ。
     static func ensureUpstreamReady() async throws -> Discovery {
+        logActiveOverrides()
         let discoveryPath = DiscoveryFile.resolvePath()
 
         if let existing = DiscoveryFile.read(path: discoveryPath), await isHealthy(existing) {
@@ -183,24 +196,95 @@ enum Bridge {
         request.setValue("Bearer \(discovery.token)", forHTTPHeaderField: "Authorization")
         request.httpBody = Data(jsonRpcLine.utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        // C# の HttpCompletionOption.ResponseHeadersRead 相当。本文を全部待つ
+        // `URLSession.data(for:)` だと、接続を開いたままにする text/event-stream 上流で
+        // タイムアウト (120 秒) まで返らない。
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        let http = response as? HTTPURLResponse
 
-        if let http = response as? HTTPURLResponse {
-            if http.statusCode == 202 || http.statusCode == 204 {
-                return nil
-            }
-            if let contentType = http.value(forHTTPHeaderField: "Content-Type"),
-                contentType.lowercased().hasPrefix("text/event-stream") {
-                guard let text = String(data: data, encoding: .utf8),
-                    let block = SseParser.firstDataBlock(text)
-                else {
-                    return nil
-                }
-                return Data(block.utf8)
-            }
+        if let http, http.statusCode == 202 || http.statusCode == 204 {
+            bytes.task.cancel()
+            return nil
         }
 
-        return data.isEmpty ? nil : data
+        // 4xx/5xx: 本文が JSON-RPC ならそのまま流す。そうでなければ (例: 401
+        // `{"error":"unauthorized"}`) stdout に流しても id が解決されないので、
+        // stderr に記録した上でこのプロセス自身がエラー応答を組み立てる。
+        if let http, http.statusCode >= 400 {
+            let body = try await readAll(bytes)
+            if UpstreamBody.isJsonRpcMessage(body) {
+                return body.isEmpty ? nil : body
+            }
+            let message = "HTTP \(http.statusCode): \(UpstreamBody.summarize(body))"
+            logToStderr(message)
+            return LocalErrorResponse.make(requestLine: jsonRpcLine, message: message)
+        }
+
+        if let http, let contentType = http.value(forHTTPHeaderField: "Content-Type"),
+            contentType.lowercased().hasPrefix("text/event-stream") {
+            return try await readFirstSseData(bytes)
+        }
+
+        let body = try await readAll(bytes)
+        return body.isEmpty ? nil : body
+    }
+
+    /// SSE を 1 行ずつ読み、data ブロックが閉じた (data のあとに空行が来た) 時点で返す。
+    /// 上流が接続を開いたままでも待たされない。C# の `ReadFirstSseDataAsync` と同じ規則。
+    ///
+    /// 行分割を自前で行うのは、Foundation の `AsyncLineSequence` (`bytes.lines`) が
+    /// **空行を捨てる**ため。SSE ではイベントの終端がまさにその空行なので、`lines` では
+    /// 終端を検出できず上流が接続を閉じるまで待つことになる。
+    private static func readFirstSseData(_ bytes: URLSession.AsyncBytes) async throws -> Data? {
+        var buffer = ""
+        var sawData = false
+        var pending: [UInt8] = []
+        var skipNextLF = false
+
+        /// 1 行を処理する。戻り値 true で「最初の data ブロックが閉じた」。
+        func consume(_ raw: [UInt8]) -> Bool {
+            let text = String(decoding: raw, as: UTF8.self)
+            if text.isEmpty {
+                return sawData
+            }
+            if let payload = SseParser.dataPayload(of: text) {
+                buffer += payload
+                sawData = true
+            }
+            return false
+        }
+
+        for try await byte in bytes {
+            if skipNextLF {
+                skipNextLF = false
+                if byte == 0x0A { continue }  // CRLF の LF は行終端として二重に数えない
+            }
+            if byte == 0x0D || byte == 0x0A {
+                skipNextLF = byte == 0x0D
+                let finished = consume(pending)
+                pending.removeAll(keepingCapacity: true)
+                if finished { break }
+                continue
+            }
+            pending.append(byte)
+        }
+        // 終端記号なしで stream が終わった場合の最終行 (StreamReader.ReadLine と同じ扱い)。
+        if !pending.isEmpty {
+            _ = consume(pending)
+        }
+
+        // 最初のイベントだけ読めればよいので、残りは受け取らずに切る。
+        bytes.task.cancel()
+        return buffer.isEmpty ? nil : Data(buffer.utf8)
+    }
+
+    /// 本文を最後まで読む (非 SSE 応答と、エラー本文の判定用)。
+    private static func readAll(_ bytes: URLSession.AsyncBytes) async throws -> Data {
+        var data = Data()
+        for try await byte in bytes {
+            data.append(byte)
+        }
+        return data
     }
 
     // MARK: - 中継ループ
@@ -223,7 +307,17 @@ enum Bridge {
             if let responseBytes, !responseBytes.isEmpty {
                 var payload = responseBytes
                 payload.append(0x0A)
-                stdout.write(payload)
+                // SIGPIPE は main.swift で無視しているので、閉じた stdout への write は
+                // プロセス即死 (exit 141) ではなく EPIPE のエラーになる。診断を残して終了する。
+                do {
+                    try stdout.write(contentsOf: payload)
+                } catch {
+                    let nsError = error as NSError
+                    logToStderr(
+                        "stdout closed: \(errorMessage(error)) "
+                            + "(\(nsError.domain) \(nsError.code))")
+                    exit(1)
+                }
             }
         }
     }

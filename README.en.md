@@ -47,6 +47,8 @@ Download `ambient-context-mcp-vX.Y.Z.mcpb` from the [Releases](https://github.co
 
 > **macOS note**: the bundled app is ad-hoc signed (no Apple Developer Program), so Gatekeeper has to be told to allow it once. If the tools do not respond, open **System Settings → Privacy & Security** and press **Open Anyway**.
 
+> **macOS note on updates**: with ad-hoc signing the designated requirement is a bare cdhash, so **every app update voids the existing Accessibility / Automation grants** — and macOS does not prompt again, it just silently degrades the context that needs them (window title, media). After updating, open **System Settings → Privacy & Security → Accessibility / Automation**, **remove the old entry and add the app again**. A Developer ID signature would fix this; it is not currently used.
+
 ### B. Claude Code / other clients (Streamable HTTP)
 
 #### Windows
@@ -69,7 +71,7 @@ claude mcp add ambient-context \
 
 #### macOS
 
-Download `ambient-context-mcp-vX.Y.Z-macos-universal.zip` (or the `.dmg`).
+Download `ambient-context-mcp-vX.Y.Z-macos-universal.zip` (or the `.dmg`). Releases are universal binaries; a locally built single-arch package (`scripts/package-release.sh --arch arm64`) carries that arch in place of `universal`.
 
 1. Extract it and **move `Ambient Context MCP.app` to `/Applications` first**.
    (Opening it in place makes macOS run it read-only from a random App Translocation path, which breaks the discovery file and the login item.)
@@ -109,6 +111,7 @@ Both builds expose the same MCP contract, but the underlying OS APIs differ:
 | `network.interfaceKinds` | Always empty | Can report wifi / wired / cellular |
 | Media `albumArtist` / `trackNumber` / `genres` | Available | Not available (empty / 0) |
 | Unsigned distribution | SmartScreen warning | Blocked by Gatekeeper (macOS 15+ also blocks right-click → Open). Move to `/Applications`, then "Open Anyway" or remove the quarantine attribute |
+| Permissions across updates | Preserved | Ad-hoc signing changes the cdhash, so Accessibility / Automation grants are voided on every update (no re-prompt); remove and re-add the app in System Settings |
 
 ## Documentation
 

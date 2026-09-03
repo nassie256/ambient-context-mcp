@@ -99,16 +99,25 @@ enum SseParser {
                 }
                 continue
             }
-            if line.hasPrefix("data:") {
-                let afterPrefix = line.index(line.startIndex, offsetBy: 5)
-                let payloadStart =
-                    line[afterPrefix...].first == " "
-                    ? line.index(after: afterPrefix)
-                    : afterPrefix
-                buffer += line[payloadStart...]
+            if let payload = dataPayload(of: line) {
+                buffer += payload
             }
         }
         return buffer.isEmpty ? nil : buffer
+    }
+
+    /// SSE の 1 行からペイロードを取り出す。`data:` で始まらない行 (コメント / event: 等) は nil。
+    /// `data:` 直後の空白 1 個だけを取り除く (C# の `ReadFirstSseDataAsync` と同じ規則)。
+    ///
+    /// 全文を持たないストリーミング読み取り (`Bridge.forward`) からも同じ規則を使うために切り出す。
+    static func dataPayload(of line: String) -> String? {
+        guard line.hasPrefix("data:") else { return nil }
+        let afterPrefix = line.index(line.startIndex, offsetBy: 5)
+        let payloadStart =
+            line[afterPrefix...].first == " "
+            ? line.index(after: afterPrefix)
+            : afterPrefix
+        return String(line[payloadStart...])
     }
 
     /// `StreamReader.ReadLine` と同じ行分割 (CRLF / LF / CR を終端とし、末尾の
@@ -131,6 +140,34 @@ enum SseParser {
             result.append(current)
         }
         return result
+    }
+}
+
+// MARK: - HTTP エラー応答の判定
+
+enum UpstreamBody {
+    /// 本文が JSON-RPC メッセージ (`jsonrpc` を持つ JSON オブジェクト) かどうか。
+    ///
+    /// 上流が 4xx/5xx を返したときに、その本文をそのまま stdout へ流してよいかの判定に使う。
+    /// JSON-RPC でない本文 (例: `{"error":"unauthorized"}`) を流すとクライアントは
+    /// 対応する id を永久に待つことになるので、代わりにローカルエラー応答を返す。
+    static func isJsonRpcMessage(_ body: Data) -> Bool {
+        guard
+            let parsed = try? JSONSerialization.jsonObject(with: body),
+            let root = parsed as? [String: Any]
+        else {
+            return false
+        }
+        return root["jsonrpc"] != nil
+    }
+
+    /// 4xx/5xx の本文をエラーメッセージに埋め込むための短縮表現。
+    /// 前後の空白を落とし、`limit` 文字を超える場合は末尾を `…` に置き換えて丸ごと limit 文字に収める。
+    static func summarize(_ body: Data, limit: Int = 200) -> String {
+        let text = String(decoding: body, as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count > limit else { return text }
+        return String(text.prefix(limit - 1)) + "…"
     }
 }
 

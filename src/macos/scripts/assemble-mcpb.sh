@@ -17,6 +17,8 @@
 # 使い方:
 #   scripts/assemble-mcpb.sh --win-server dist/win/server --mac-server dist/macos
 #   scripts/assemble-mcpb.sh --mac-server dist/macos            # mac だけで動作確認する場合
+#       (--win-server 無しのときは manifest の entry_point / win32 command を darwin の
+#        バイナリに書き換える。ステージングに .exe が無く検証も起動も失敗するため。リリース用ではない)
 #   scripts/assemble-mcpb.sh ... --version 0.8.0 --out dist
 #
 # mcpb CLI (`npm i -g @anthropic-ai/mcpb`) があれば manifest を検証して pack し、
@@ -66,6 +68,17 @@ rm -rf "$STAGING"
 mkdir -p "$STAGING/server"
 
 cp "$MANIFEST" "$STAGING/manifest.json"
+# mac だけで組む場合、既定の manifest が指す entry_point / command
+# (server/ambient-mcp-stdio.exe) はステージングに存在しない = 検証も起動も失敗する。
+# darwin 側の実体を指すように書き換える (.exe は entry_point と win32 の command の 2 箇所だけ。
+# platform_overrides.darwin は元から拡張子なし)。動作確認専用で、リリース用ではない。
+if [ -z "$WIN_SERVER" ]; then
+  echo "--- mac-only bundle: rewriting entry_point/command to the darwin binary (not for release)"
+  sed 's#server/ambient-mcp-stdio\.exe#server/ambient-mcp-stdio#g' "$STAGING/manifest.json" \
+    > "$STAGING/manifest.json.tmp"
+  mv "$STAGING/manifest.json.tmp" "$STAGING/manifest.json"
+fi
+
 if [ -f "$REPO_ROOT/mcpb/icon.png" ]; then
   cp "$REPO_ROOT/mcpb/icon.png" "$STAGING/icon.png"
 fi

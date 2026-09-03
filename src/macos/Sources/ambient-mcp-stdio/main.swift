@@ -7,6 +7,11 @@ import Foundation
 // 中継するだけで、Hub の状態は一切持たない。
 // stdout は JSON-RPC 専用。診断は "ambient-mcp-stdio: " 前置きで stderr に出す。
 
+// クライアント (Claude Desktop) が先に落ちて stdout の読み手が消えたとき、既定の SIGPIPE では
+// 診断を一切残さずシグナル死 (シェルから見ると exit 141) する。無視して write の EPIPE を
+// 受け取り、stderr に理由を書いてから 1 で終わる (C# の "unexpected error" → return 1 と同じ扱い)。
+signal(SIGPIPE, SIG_IGN)
+
 do {
     let discovery = try await Bridge.ensureUpstreamReady()
     await Bridge.proxyLoop(discovery: discovery)

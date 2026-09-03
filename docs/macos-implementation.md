@@ -110,6 +110,15 @@ Windows 版の 3 スレッド構成 (WinUI UI / message-only window / Worker) �
 
 `AXUIElementSetMessagingTimeout(el, 1.0)` を必ず設定する。応答しないアプリがあってもキャプチャ全体を止めないため。
 
+### ad-hoc 署名と TCC 許可の失効 (アップデートのたびに起きる)
+
+TCC (アクセシビリティ / オートメーション) の許可は **designated requirement (DR)** に紐づく。Developer ID 署名なら DR は Team ID ベースなので、バージョンが上がっても同じ「アプリ」として許可が引き継がれる。しかし ad-hoc 署名 (`codesign -s -`) では DR が **cdhash そのもの**になるため、ビルドが変われば別のアプリ扱いになる。
+
+- **アプリを更新すると、既存のアクセシビリティ / オートメーション許可が無効化される**。
+- **再プロンプトは出ない**。`AXIsProcessTrusted()` が false に戻るだけで、ウィンドウタイトル / メディアが黙って degrade する (理由文字列は付く)。
+- 復旧手順はユーザ操作が必須: システム設定 → プライバシーとセキュリティ → アクセシビリティ / オートメーション で **古いエントリを削除してから追加し直す** (チェックを外して入れ直すだけでは古い DR のまま残ることがある)。
+- **Developer ID 署名にすれば解消する**が、Apple Developer Program に加入していないため現状は採用していない。この制約は README / README.en にもユーザ向けに記載してある。
+
 ## メディアコンテキストの制約
 
 macOS には SMTC 相当の公開 API が無い (`MediaRemote` は private で、macOS 15.4 以降は非 Apple プロセスから閉じられている。`MPNowPlayingInfoCenter` は publish 専用で読み取り不可)。そのため Apple Events で Music.app / Spotify に直接問い合わせる。
@@ -143,8 +152,10 @@ macOS には SMTC 相当の公開 API が無い (`MediaRemote` は private で�
 
 `scripts/package-release.sh` が配布物を作る。
 
-- `dist/ambient-context-mcp-v<ver>-macos-universal.zip` — `ditto -c -k --sequesterRsrc` (署名と拡張属性を保つ)。`Ambient Context MCP.app` と `ambient-mcp-stdio` がトップレベルに並ぶ。
-- `dist/ambient-context-mcp-v<ver>-macos-universal.dmg` — `hdiutil` (UDZO)。`.app` + `Applications` シンボリックリンク。
+- `dist/ambient-context-mcp-v<ver>-macos-<arch>.zip` — `ditto -c -k --sequesterRsrc` (署名と拡張属性を保つ)。`Ambient Context MCP.app` と `ambient-mcp-stdio` がトップレベルに並ぶ。
+- `dist/ambient-context-mcp-v<ver>-macos-<arch>.dmg` — `hdiutil` (UDZO)。`.app` + `Applications` シンボリックリンク。
+
+`<arch>` は `--arch` の値をそのまま使う (`universal` / `arm64` / `x86_64`)。リリースは `universal` だが、`--arch arm64` で作ったものを `-macos-universal` と名乗らせない。
 
 `.mcpb` は Windows / macOS 同梱の 1 ファイルなので、片方のランナーだけでは作れない。CI (`.github/workflows/release.yml`) が `build-windows` と `build-macos` の `server/` ペイロードを両方ダウンロードし、`package` ジョブで `scripts/assemble-mcpb.sh` に渡す。バンドル内の配置:
 
@@ -158,6 +169,23 @@ server/
 ```
 
 `.app` の実行ビットとシンボリックリンクを保つため、CI では macOS の `server/` を **tar に固めて** artifact 経由で受け渡し、合成も macOS ランナーで行う。
+
+`--win-server` を省いた mac 単独モード (動作確認用) では、staging に `server/ambient-mcp-stdio.exe` が存在しないのに manifest の `entry_point` / win32 の `command` がそれを指すという不整合が起きる。そのため `assemble-mcpb.sh` は mac 単独モードのときだけ**コピー後の manifest の `.exe` を darwin のバイナリ名に書き換える** (リポジトリの `mcpb/manifest.json` は変更しない)。この成果物は動作確認専用で、リリースには使わない。
+
+### stdio ブリッジの開発用環境変数
+
+`ambient-mcp-stdio` は次の 2 つの環境変数で上流の解決先を差し替えられる。**開発とテスト専用**で、通常の配布物では設定しない。
+
+| 環境変数 | 効果 |
+|---|---|
+| `AMBIENT_MCP_DISCOVERY_PATH` | discovery ファイル (既定 `~/Library/Application Support/AmbientContextMcp/mcp-api.json`) のパスを差し替える。偽の上流に向けたテストで使う |
+| `AMBIENT_MCP_APP_PATH` | 起動するトレイ (`.app` もしくは裸実行ファイル) のパスを差し替える。実アプリを起動させたくないテストで使う |
+
+どちらも常時有効なので、意図しない環境で黙って別の上流に繋がることを防ぐため、**設定されているときは起動時に stderr へ 1 行出す**:
+
+```
+ambient-mcp-stdio: using override AMBIENT_MCP_DISCOVERY_PATH = /tmp/fake/mcp-api.json
+```
 
 ### Gatekeeper (ユーザ向け手順)
 

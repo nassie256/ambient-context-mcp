@@ -1,11 +1,11 @@
 #!/bin/bash
 # macOS 版のリリース成果物 (.zip / .dmg) を作る。tools/build-release.ps1 の macOS 版。
 #
-#   dist/ambient-context-mcp-v<Version>-macos-universal.zip
+#   dist/ambient-context-mcp-v<Version>-macos-<arch>.zip     (<arch> = universal | arm64 | x86_64)
 #       `Ambient Context MCP.app` と `ambient-mcp-stdio` をフラットに含む。
 #       Claude Code / Streamable HTTP ユーザ向け。展開 → /Applications へ移動して起動。
 #
-#   dist/ambient-context-mcp-v<Version>-macos-universal.dmg
+#   dist/ambient-context-mcp-v<Version>-macos-<arch>.dmg
 #       `Ambient Context MCP.app` + `Applications` シンボリックリンク。
 #
 # クロスプラットフォームの `.mcpb` は Windows 側の成果物も要るのでここでは作らない。
@@ -59,8 +59,11 @@ STAGING="$DIST_DIR/macos"
 
 "$SCRIPT_DIR/build-app.sh" --version "$VERSION" --arch "$ARCH_MODE" --out "$STAGING"
 
-ZIP_PATH="$DIST_DIR/ambient-context-mcp-v$VERSION-macos-universal.zip"
-DMG_PATH="$DIST_DIR/ambient-context-mcp-v$VERSION-macos-universal.dmg"
+# 成果物名には実際にビルドしたアーキテクチャを入れる ("universal" / "arm64" / "x86_64")。
+# --arch arm64 で作ったものを -macos-universal と名乗らせない。
+NAME_BASE="$DIST_DIR/ambient-context-mcp-v$VERSION-macos-$ARCH_MODE"
+ZIP_PATH="$NAME_BASE.zip"
+DMG_PATH="$NAME_BASE.dmg"
 
 # --- .zip ------------------------------------------------------------------
 # ditto は署名と拡張属性を保ったまま往復できる (PoC 4 §6.2)。--keepParent を付けないと
