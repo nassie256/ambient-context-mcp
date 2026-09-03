@@ -1,0 +1,120 @@
+/* Ambient Context MCP - 日本語 UI 文字列。
+   キーは src/windows/AmbientContextMcp.Desktop/Resources/Strings.cs の C# プロパティ名。
+   "Mac" 接頭辞のキーは Windows 版に対応物が無い macOS 専用 (権限誘導 / ログイン項目)。 */
+
+/* ----- SettingsWindow ----- */
+"WindowTitle" = "Ambient Context MCP 設定";
+"TabMcpServer" = "MCPサーバ";
+"McpServerGroup" = "MCP サーバ";
+"LabelStatus" = "状態";
+"LabelEndpoint" = "Endpoint";
+"LabelToken" = "Token";
+"LabelPort" = "ポート";
+"ButtonCopy" = "コピー";
+"PortChangeNote" = "変更はアプリ再起動後に反映";
+"AutoStartCheckbox" = "ログイン時に自動起動";
+"PersistEventLogCheckbox" = "イベント履歴をディスクに保存する";
+"PersistEventLogNote" = "再起動後も保持期間内の履歴を保てます。";
+"CopyClaudeCodeSnippet" = "Claude Code 用設定スニペットをコピー";
+"TabTransmission" = "送信設定";
+"TransmissionExplanation" = "MCPクライアントへ公開してよいコンテキストにチェックを入れてください。未チェックの項目は、クライアントが高い権限を要求しても送信されません。";
+"AllowAllCheckbox" = "すべてのコンテキストを許可する";
+"EventHistoryGroup" = "イベント履歴";
+"SensitivityLegend" = "機微度: Low = 公開しても影響が小さい / Medium = 文脈次第で機微になり得る / High = 個人特定や具体的行動を含み得る";
+"LabelRetention" = "保持期間";
+"LabelMaxCount" = "最大件数";
+"Retention1Hour" = "1時間";
+"Retention6Hours" = "6時間";
+"Retention24Hours" = "24時間";
+"Retention7Days" = "7日";
+"Count100" = "100件";
+"Count500" = "500件";
+"Count1000" = "1000件";
+"Count5000" = "5000件";
+"ButtonSave" = "保存";
+"ButtonClose" = "閉じる";
+
+/* ----- 表示言語 ----- */
+"LabelLanguage" = "表示言語";
+"LanguageSystemDefault" = "システムに従う";
+"LanguageJapanese" = "日本語";
+"LanguageEnglish" = "English";
+
+/* ----- ステータス ----- */
+"StatusSaved" = "保存しました。送信設定は次回の文脈更新から反映されます。ポート変更はアプリ再起動後に有効になります。";
+"StatusSavedNeedsRestart" = "保存しました。言語とポートの変更はアプリ再起動後に反映されます。";
+"StatusClaudeCodeCopied" = "Claude Code 用のコマンドをクリップボードにコピーしました。";
+/* %1$@ = 例外型, %2$@ = メッセージ */
+"StatusSaveFailedFormat" = "保存に失敗しました: %1$@: %2$@";
+/* %1$@ = ポート番号 */
+"StatusMcpRunningFormat" = "起動中 :%1$@";
+
+/* ----- 送信設定のグループ / オプション ----- */
+"TxGroupForegroundApp" = "フォアグラウンドアプリ";
+"TxGroupActivity" = "作業リズム";
+"TxGroupMedia" = "メディア";
+"TxGroupEnvironment" = "環境";
+"TxUiForegroundIdentity" = "作業カテゴリ・名前・プロセス名（現在値 + 切替通知）";
+"TxUiForegroundTitleSummary" = "タイトル要約（現在値 + 変更履歴）";
+"TxUiForegroundRawTitle" = "タイトル原文（現在値 + 変更履歴）";
+"TxUiActivitySwitchRate" = "切替頻度（現在値）";
+"TxUiActivitySwitchBurst" = "切替急増（通知）";
+"TxUiMediaOverview" = "再生の有無・状態・再生元（現在値 + 再生通知）";
+"TxUiMediaTitle" = "タイトル（現在値 + 変更履歴）";
+"TxUiMediaArtist" = "アーティスト（現在値 + 変更履歴）";
+"TxUiMediaAlbum" = "アルバム（現在値 + 変更履歴）";
+"TxUiEnvironmentTimezone" = "タイムゾーン（現在値 + 変更通知）";
+"TxUiEnvironmentDisplays" = "ディスプレイ構成（現在値 + 変更通知）";
+
+/* ----- path 単位の旧ラベル (参考用に保持) ----- */
+"TxOptForegroundCategory" = "フォアグラウンドアプリの作業カテゴリ";
+"TxOptForegroundAppName" = "フォアグラウンドアプリ名";
+"TxOptForegroundProcessName" = "フォアグラウンドアプリのプロセス名";
+"TxOptForegroundTitleSummary" = "フォアグラウンドウィンドウのタイトル要約";
+"TxOptForegroundRawWindowTitle" = "フォアグラウンドウィンドウのタイトル原文";
+"TxOptEventForegroundChanged" = "フォアグラウンドアプリ切替イベント (アプリ名・プロセス名込み)";
+"TxOptEventForegroundTitleChanged" = "フォアグラウンドウィンドウのタイトル変更イベント (アプリ文脈込み)";
+"TxOptEventForegroundTitleChangedSummary" = "フォアグラウンドウィンドウのタイトル変更イベント: 要約";
+"TxOptEventForegroundTitleChangedRaw" = "フォアグラウンドウィンドウのタイトル変更イベント: 原文";
+"TxOptActivityContextSwitches" = "フォアグラウンドアプリ切替頻度";
+"TxOptEventContextSwitchBurst" = "フォアグラウンドアプリ切替増加イベント";
+"TxOptMediaIsAvailable" = "メディアセッション有無";
+"TxOptMediaPlaybackStatus" = "メディア再生状態";
+"TxOptMediaSourceApp" = "メディア再生元アプリ";
+"TxOptMediaTitle" = "メディアタイトル";
+"TxOptMediaArtist" = "メディアアーティスト";
+"TxOptMediaAlbumTitle" = "メディアアルバム";
+"TxOptEventMediaPlaybackStarted" = "メディア再生開始イベント";
+"TxOptEventMediaPlaybackPaused" = "メディア一時停止イベント";
+"TxOptEventMediaSessionChanged" = "メディアセッション変更イベント";
+"TxOptEventMediaSessionChangedTitle" = "メディアセッション変更イベント: タイトル";
+"TxOptEventMediaSessionChangedArtist" = "メディアセッション変更イベント: アーティスト";
+"TxOptEventMediaSessionChangedAlbumTitle" = "メディアセッション変更イベント: アルバム";
+"TxOptSystemTimeZone" = "タイムゾーン";
+"TxOptDisplayCount" = "ディスプレイ数";
+"TxOptDisplays" = "ディスプレイ構成";
+
+/* ----- メニューバー ----- */
+"TraySettings" = "設定...";
+"TrayCopyMcpUrl" = "MCP URL をコピー";
+"TrayCopyMcpToken" = "MCP トークンをコピー";
+"TrayCopyClaudeCodeSnippet" = "Claude Code 用設定をコピー";
+"TrayPause" = "一時停止";
+"TrayResume" = "再開";
+"TrayPausedSuffix" = " (一時停止中)";
+"TrayExit" = "終了";
+
+/* ----- 起動失敗 ----- */
+/* %1$@ = 例外の型/メッセージ, %2$@ = ポート番号 */
+"StartupErrorFormat" = "Ambient Context MCP の起動に失敗しました。\n\n%1$@\n\nポート %2$@ が他プロセスで使用中の可能性があります。\n~/Library/Application Support/AmbientContextMcp/settings.json の mcpServer.port を変更するか、同ファイルを削除して再起動してください。";
+
+/* ----- macOS 専用: 権限とログイン項目 ----- */
+"MacPermissionAccessibilityTitle" = "アクセシビリティ権限が必要です";
+"MacPermissionAccessibilityMessage" = "ウィンドウタイトルの送信が有効になっていますが、Ambient Context MCP にアクセシビリティの許可がありません。システム設定 → プライバシーとセキュリティ → アクセシビリティ で許可するまで、タイトルは空のままになります。";
+"MacPermissionAutomationTitle" = "オートメーション権限が必要です";
+"MacPermissionAutomationMessage" = "メディアの送信が有効になりました。Music または Spotify が起動している状態での次回の取得時に、macOS が「Ambient Context MCP に操作を許可しますか」と尋ねます。拒否した場合はメディア情報が空になります。あとから システム設定 → プライバシーとセキュリティ → オートメーション で変更できます。";
+"MacPermissionOpenSettings" = "システム設定を開く";
+"MacPermissionLater" = "あとで";
+"MacAutostartUnavailableFormat" = "ログイン項目を変更できませんでした: %1$@";
+"MacAutostartNotBundled" = "ログイン項目はインストール済みの「Ambient Context MCP.app」から起動した場合のみ利用できます (開発ビルドでは使えません)。";
+"MacAutostartRequiresApproval" = "ログイン項目を登録しましたが、システム設定 → 一般 → ログイン項目 で無効にされています。そちらで有効にしてください。";
