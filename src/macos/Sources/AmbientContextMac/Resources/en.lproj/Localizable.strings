@@ -1,0 +1,123 @@
+/* Ambient Context MCP - English UI strings.
+   Keys are the C# property names of
+   src/windows/AmbientContextMcp.Desktop/Resources/Strings.cs so that the two
+   implementations stay comparable key by key. Keys prefixed with "Mac" have no
+   Windows counterpart (macOS-only permission / login item guidance). */
+
+/* ----- SettingsWindow ----- */
+"WindowTitle" = "Ambient Context MCP — Settings";
+"TabMcpServer" = "MCP Server";
+"McpServerGroup" = "MCP Server";
+"LabelStatus" = "Status";
+"LabelEndpoint" = "Endpoint";
+"LabelToken" = "Token";
+"LabelPort" = "Port";
+"ButtonCopy" = "Copy";
+"PortChangeNote" = "Changes apply after restart";
+"AutoStartCheckbox" = "Start automatically at login";
+"PersistEventLogCheckbox" = "Persist event history to disk";
+"PersistEventLogNote" = "Keeps history across restarts within the retention window.";
+"CopyClaudeCodeSnippet" = "Copy Claude Code config snippet";
+"TabTransmission" = "Transmission";
+"TransmissionExplanation" = "Check the contexts you allow MCP clients to read. Unchecked items are never transmitted, even if a client requests a higher scope.";
+"AllowAllCheckbox" = "Allow every context";
+"EventHistoryGroup" = "Event history";
+"SensitivityLegend" = "Sensitivity: Low = low impact if shared / Medium = context-dependent / High = may identify the user or expose specific behavior";
+"LabelRetention" = "Retention";
+"LabelMaxCount" = "Max events";
+"Retention1Hour" = "1 hour";
+"Retention6Hours" = "6 hours";
+"Retention24Hours" = "24 hours";
+"Retention7Days" = "7 days";
+"Count100" = "100";
+"Count500" = "500";
+"Count1000" = "1,000";
+"Count5000" = "5,000";
+"ButtonSave" = "Save";
+"ButtonClose" = "Close";
+
+/* ----- Language picker ----- */
+"LabelLanguage" = "Display language";
+"LanguageSystemDefault" = "System default";
+"LanguageJapanese" = "Japanese (日本語)";
+"LanguageEnglish" = "English";
+
+/* ----- Status messages ----- */
+"StatusSaved" = "Saved. Transmission settings take effect at the next context refresh. Port changes apply after restart.";
+"StatusSavedNeedsRestart" = "Saved. Language and port changes take effect after restart.";
+"StatusClaudeCodeCopied" = "Copied the Claude Code command to the clipboard.";
+/* %1$@ = error type, %2$@ = message */
+"StatusSaveFailedFormat" = "Save failed: %1$@: %2$@";
+/* %1$@ = port number */
+"StatusMcpRunningFormat" = "Running :%1$@";
+
+/* ----- Transmission option groups ----- */
+"TxGroupForegroundApp" = "Foreground app";
+"TxGroupActivity" = "Work rhythm";
+"TxGroupMedia" = "Media";
+"TxGroupEnvironment" = "Environment";
+"TxUiForegroundIdentity" = "Work category, name, and process (current value + switch notifications)";
+"TxUiForegroundTitleSummary" = "Title summary (current value + change history)";
+"TxUiForegroundRawTitle" = "Raw title (current value + change history)";
+"TxUiActivitySwitchRate" = "Switch rate (current value)";
+"TxUiActivitySwitchBurst" = "Switch burst (notification)";
+"TxUiMediaOverview" = "Playback presence, status, and source (current value + playback notifications)";
+"TxUiMediaTitle" = "Title (current value + change history)";
+"TxUiMediaArtist" = "Artist (current value + change history)";
+"TxUiMediaAlbum" = "Album (current value + change history)";
+"TxUiEnvironmentTimezone" = "Time zone (current value + change notifications)";
+"TxUiEnvironmentDisplays" = "Display layout (current value + change notifications)";
+
+/* ----- Transmission options (legacy per-path labels; kept for reference) ----- */
+"TxOptForegroundCategory" = "Foreground app work category";
+"TxOptForegroundAppName" = "Foreground app name";
+"TxOptForegroundProcessName" = "Foreground app process name";
+"TxOptForegroundTitleSummary" = "Foreground window title summary";
+"TxOptForegroundRawWindowTitle" = "Foreground window raw title";
+"TxOptEventForegroundChanged" = "Foreground app switch event (includes app and process name)";
+"TxOptEventForegroundTitleChanged" = "Foreground window title change event (includes app context)";
+"TxOptEventForegroundTitleChangedSummary" = "Foreground window title change event: summary";
+"TxOptEventForegroundTitleChangedRaw" = "Foreground window title change event: raw title";
+"TxOptActivityContextSwitches" = "Foreground app switch rate";
+"TxOptEventContextSwitchBurst" = "Foreground app switch burst event";
+"TxOptMediaIsAvailable" = "Media session presence";
+"TxOptMediaPlaybackStatus" = "Media playback status";
+"TxOptMediaSourceApp" = "Media source app";
+"TxOptMediaTitle" = "Media title";
+"TxOptMediaArtist" = "Media artist";
+"TxOptMediaAlbumTitle" = "Media album";
+"TxOptEventMediaPlaybackStarted" = "Media playback started event";
+"TxOptEventMediaPlaybackPaused" = "Media playback paused event";
+"TxOptEventMediaSessionChanged" = "Media session changed event";
+"TxOptEventMediaSessionChangedTitle" = "Media session changed: title";
+"TxOptEventMediaSessionChangedArtist" = "Media session changed: artist";
+"TxOptEventMediaSessionChangedAlbumTitle" = "Media session changed: album";
+"TxOptSystemTimeZone" = "Time zone";
+"TxOptDisplayCount" = "Display count";
+"TxOptDisplays" = "Display layout";
+
+/* ----- Menu bar item ----- */
+"TraySettings" = "Settings...";
+"TrayCopyMcpUrl" = "Copy MCP URL";
+"TrayCopyMcpToken" = "Copy MCP token";
+"TrayCopyClaudeCodeSnippet" = "Copy Claude Code config";
+"TrayPause" = "Pause";
+"TrayResume" = "Resume";
+"TrayPausedSuffix" = " (paused)";
+"TrayExit" = "Quit";
+
+/* ----- Startup error ----- */
+/* %1$@ = error type/message, %2$@ = port number */
+"StartupErrorFormat" = "Ambient Context MCP failed to start.\n\n%1$@\n\nPort %2$@ may be in use by another process. Edit mcpServer.port in ~/Library/Application Support/AmbientContextMcp/settings.json, or delete the file and restart.";
+
+/* ----- macOS only: permissions and login item ----- */
+"MacPermissionAccessibilityTitle" = "Accessibility permission required";
+"MacPermissionAccessibilityMessage" = "Window title contexts are enabled, but Ambient Context MCP is not allowed to use the Accessibility API yet. Until you allow it in System Settings → Privacy & Security → Accessibility, the window title stays empty.\n\nAfter allowing it, you may need to quit and reopen Ambient Context MCP for the permission to take effect.\n\nIf the app was updated or replaced after you allowed it, macOS keeps the old entry: remove \"Ambient Context MCP\" from the Accessibility list and add it again.";
+"MacPermissionAutomationTitle" = "Automation permission required";
+"MacPermissionAutomationMessage" = "Media contexts are enabled. The first time Music or Spotify is running during a capture, macOS asks whether Ambient Context MCP may control it. If you decline, media information stays empty; you can change the answer later in System Settings → Privacy & Security → Automation.";
+"MacPermissionOpenSettings" = "Open System Settings";
+"MacPermissionLater" = "Later";
+"MacAutostartUnavailableFormat" = "Could not change the login item: %1$@";
+"MacAutostartNotBundled" = "Login items are only available when running the installed \"Ambient Context MCP.app\" (not a development build).";
+"MacAutostartRequiresApproval" = "The login item was registered but is turned off in System Settings → General → Login Items. Enable it there.";
+"MacStatusSavedAutostartFailedFormat" = "%1$@ (login item not applied: %2$@)";

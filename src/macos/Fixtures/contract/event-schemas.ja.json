@@ -1,0 +1,603 @@
+[
+  {
+    "name": "presence_bucket_changed",
+    "sensitivity": "low",
+    "description": "\u5728\u5E2D\u72B6\u614B (active / idle / away_short / away_long / locked) \u304C\u9077\u79FB\u3057\u305F\u3068\u304D\u306B\u767A\u706B\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u524D\u306E bucket\u3002",
+        "example": "active"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u5F8C\u306E bucket\u3002",
+        "example": "idle"
+      }
+    ]
+  },
+  {
+    "name": "user_returned",
+    "sensitivity": "low",
+    "description": "\u96E2\u5E2D\u72B6\u614B (idle / away / locked) \u304B\u3089 active \u306B\u5FA9\u5E30\u3057\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u5FA9\u5E30\u524D\u306E bucket\u3002",
+        "example": "idle"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u901A\u5E38 \u0022active\u0022\u3002",
+        "example": "active"
+      }
+    ]
+  },
+  {
+    "name": "user_became_idle",
+    "sensitivity": "low",
+    "description": "active \u304B\u3089 idle \u306B\u9077\u79FB\u3057\u305F\u77AC\u9593\u3002\u5272\u308A\u8FBC\u307F\u6291\u5236\u306B\u4F7F\u3048\u308B\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u524D\u306E bucket\u3002",
+        "example": "active"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u901A\u5E38 \u0022idle\u0022\u3002",
+        "example": "idle"
+      }
+    ]
+  },
+  {
+    "name": "first_activity_today",
+    "sensitivity": "low",
+    "description": "\u30ED\u30FC\u30AB\u30EB\u30AB\u30EC\u30F3\u30C0\u30FC\u65E5\u306E\u521D\u56DE active \u691C\u51FA\u6642\u306B 1 \u56DE\u3060\u3051\u767A\u706B\u3002\u518D\u8D77\u52D5\u3092\u8DE8\u3044\u3067\u3082 1 \u65E5 1 \u56DE\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "long_session_warning",
+    "sensitivity": "low",
+    "description": "\u9023\u7D9A active \u304C 90 \u5206\u4EE5\u4E0A\u7D4C\u904E\u3057\u305F\u3053\u3068\u3092\u901A\u77E5\u3002\u4F11\u61A9\u63D0\u6848\u30C8\u30EA\u30AC\u306B\u4F7F\u3048\u308B\u3002",
+    "payloadKeys": [
+      {
+        "key": "continuous_active_minutes",
+        "sensitivity": "low",
+        "description": "\u9023\u7D9A active \u5206\u6570\u3002",
+        "example": "92"
+      }
+    ]
+  },
+  {
+    "name": "session_locked",
+    "sensitivity": "medium",
+    "description": "OS \u30BB\u30C3\u30B7\u30E7\u30F3\u304C\u30ED\u30C3\u30AF\u3055\u308C\u305F\u77AC\u9593\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "session_unlocked",
+    "sensitivity": "medium",
+    "description": "OS \u30BB\u30C3\u30B7\u30E7\u30F3\u304C\u30A2\u30F3\u30ED\u30C3\u30AF\u3055\u308C\u305F\u77AC\u9593\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "session_logon",
+    "sensitivity": "medium",
+    "description": "OS \u30BB\u30C3\u30B7\u30E7\u30F3\u958B\u59CB\u6642\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "session_logoff",
+    "sensitivity": "medium",
+    "description": "OS \u30BB\u30C3\u30B7\u30E7\u30F3\u7D42\u4E86\u6642\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "foreground_changed",
+    "sensitivity": "medium",
+    "description": "\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u306E process_name \u307E\u305F\u306F category \u304C\u76F4\u8FD1 emit \u3068\u5909\u308F\u3063\u305F\u77AC\u9593\u3002category_changed \u30D5\u30E9\u30B0\u3067\u30AB\u30C6\u30B4\u30EA\u9077\u79FB\u304B\u3069\u3046\u304B\u3092\u533A\u5225\u3067\u304D\u308B (\u65E7 foreground_app_category_changed \u306F\u3053\u306E\u30D5\u30E9\u30B0\u306B\u7D71\u5408\u3055\u308C\u305F)\u3002",
+    "payloadKeys": [
+      {
+        "key": "category",
+        "sensitivity": "medium",
+        "description": "\u65B0\u3057\u3044\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u306E\u30AB\u30C6\u30B4\u30EA (\u7A7A\u6587\u5B57 = \u8A72\u5F53\u30C7\u30FC\u30BF\u306A\u3057)\u3002",
+        "example": "code"
+      },
+      {
+        "key": "app_name",
+        "sensitivity": "medium",
+        "description": "\u65B0\u3057\u3044\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u540D (\u7A7A\u6587\u5B57 = \u8A72\u5F53\u30C7\u30FC\u30BF\u306A\u3057)\u3002",
+        "example": "Visual Studio Code"
+      },
+      {
+        "key": "process_name",
+        "sensitivity": "medium",
+        "description": "\u65B0\u3057\u3044\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u306E\u5B9F\u884C\u30D5\u30A1\u30A4\u30EB\u540D\u3002",
+        "example": "Code.exe"
+      },
+      {
+        "key": "category_changed",
+        "sensitivity": "medium",
+        "description": "\u76F4\u8FD1 emit \u306E\u30AB\u30C6\u30B4\u30EA\u3068\u6BD4\u8F03\u3057\u3066 \u0022true\u0022 / \u0022false\u0022\u3002\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u306F\u5909\u308F\u3063\u305F\u304C\u30AB\u30C6\u30B4\u30EA\u306F\u540C\u3058\u5834\u5408\u306F \u0022false\u0022\u3002",
+        "example": "true"
+      }
+    ]
+  },
+  {
+    "name": "foreground_title_changed",
+    "sensitivity": "medium",
+    "description": "\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30BF\u30A4\u30C8\u30EB (\u539F\u6587 / \u8981\u7D04) \u304C\u76F4\u8FD1 emit \u3068\u5909\u308F\u3063\u305F\u77AC\u9593\u3002\u540C\u4E00\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u5185\u306E\u30BF\u30D6/\u30D5\u30A1\u30A4\u30EB\u5207\u66FF\u3082\u3053\u3053\u3067\u5C65\u6B74\u306B\u6B8B\u308B\u3002raw_window_title / titleSummary.* \u306F\u5225 path \u3067\u500B\u5225 opt-in \u304C\u5FC5\u8981\u3002",
+    "payloadKeys": [
+      {
+        "key": "category",
+        "sensitivity": "medium",
+        "description": "\u73FE\u5728\u306E\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u306E\u4F5C\u696D\u30AB\u30C6\u30B4\u30EA (\u7A7A\u6587\u5B57 = \u8A72\u5F53\u30C7\u30FC\u30BF\u306A\u3057)\u3002",
+        "example": "browser"
+      },
+      {
+        "key": "app_name",
+        "sensitivity": "medium",
+        "description": "\u73FE\u5728\u306E\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u540D (\u7A7A\u6587\u5B57 = \u8A72\u5F53\u30C7\u30FC\u30BF\u306A\u3057)\u3002",
+        "example": "Google Chrome"
+      },
+      {
+        "key": "process_name",
+        "sensitivity": "medium",
+        "description": "\u73FE\u5728\u306E\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u306E\u5B9F\u884C\u30D5\u30A1\u30A4\u30EB\u540D\u3002",
+        "example": "chrome.exe"
+      },
+      {
+        "key": "titleSummary.has_title",
+        "sensitivity": "medium",
+        "description": "\u30BF\u30A4\u30C8\u30EB\u304C\u5B58\u5728\u3059\u308B\u5834\u5408 \u0022true\u0022\u3002",
+        "example": "true"
+      },
+      {
+        "key": "titleSummary.file_ext",
+        "sensitivity": "medium",
+        "description": "\u63A8\u5B9A\u30D5\u30A1\u30A4\u30EB\u62E1\u5F35\u5B50 (editor \u30AB\u30C6\u30B4\u30EA\u7B49)\u3002",
+        "example": "cs"
+      },
+      {
+        "key": "titleSummary.known_site",
+        "sensitivity": "medium",
+        "description": "\u65E2\u77E5\u30B5\u30A4\u30C8\u540D (browser \u30AB\u30C6\u30B4\u30EA)\u3002",
+        "example": "github.com"
+      },
+      {
+        "key": "raw_window_title",
+        "sensitivity": "high",
+        "description": "\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30BF\u30A4\u30C8\u30EB\u539F\u6587\u3002\u30DA\u30FC\u30B8\u540D\u30FB\u30D5\u30A1\u30A4\u30EB\u540D\u30FBDM\u76F8\u624B\u30FB\u691C\u7D22\u8A9E\u306A\u3069\u3002",
+        "example": "Program.cs - MyProject - Visual Studio"
+      }
+    ]
+  },
+  {
+    "name": "battery_medium",
+    "sensitivity": "low",
+    "description": "\u30D0\u30C3\u30C6\u30EA\u30FC\u6B8B\u91CF\u304C medium \u30D0\u30B1\u30C3\u30C8 (20\u201350%) \u306B\u4E0B\u304C\u3063\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "percent",
+        "sensitivity": "low",
+        "description": "\u73FE\u5728\u306E\u6B8B\u91CF\u30D1\u30FC\u30BB\u30F3\u30C8 (\u0022unknown\u0022 \u306E\u5834\u5408\u3042\u308A)\u3002",
+        "example": "47"
+      }
+    ]
+  },
+  {
+    "name": "battery_low",
+    "sensitivity": "low",
+    "description": "\u30D0\u30C3\u30C6\u30EA\u30FC\u6B8B\u91CF\u304C low \u30D0\u30B1\u30C3\u30C8 (10\u201320%) \u306B\u4E0B\u304C\u3063\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "percent",
+        "sensitivity": "low",
+        "description": "\u73FE\u5728\u306E\u6B8B\u91CF\u30D1\u30FC\u30BB\u30F3\u30C8\u3002",
+        "example": "18"
+      }
+    ]
+  },
+  {
+    "name": "battery_critical",
+    "sensitivity": "low",
+    "description": "\u30D0\u30C3\u30C6\u30EA\u30FC\u6B8B\u91CF\u304C critical \u30D0\u30B1\u30C3\u30C8 (\u003C10%) \u306B\u4E0B\u304C\u3063\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "percent",
+        "sensitivity": "low",
+        "description": "\u73FE\u5728\u306E\u6B8B\u91CF\u30D1\u30FC\u30BB\u30F3\u30C8\u3002",
+        "example": "8"
+      }
+    ]
+  },
+  {
+    "name": "battery_percent_crossed_threshold",
+    "sensitivity": "low",
+    "description": "\u6B8B\u91CF\u304C 80 / 50 / 30 / 20 % \u306E\u3044\u305A\u308C\u304B\u3092\u8DE8\u3044\u3060\u77AC\u9593\u3002\u30D7\u30ED\u30F3\u30D7\u30C8\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u4FE1\u53F7\u3002",
+    "payloadKeys": [
+      {
+        "key": "threshold",
+        "sensitivity": "low",
+        "description": "\u8DE8\u3044\u3060\u3057\u304D\u3044\u5024\u3002",
+        "example": "30"
+      },
+      {
+        "key": "direction",
+        "sensitivity": "low",
+        "description": "\u0022up\u0022 or \u0022down\u0022.",
+        "example": "down"
+      },
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u76F4\u524D\u306E\u6B8B\u91CF\u30D1\u30FC\u30BB\u30F3\u30C8\u3002",
+        "example": "31"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u73FE\u5728\u306E\u6B8B\u91CF\u30D1\u30FC\u30BB\u30F3\u30C8\u3002",
+        "example": "29"
+      }
+    ]
+  },
+  {
+    "name": "charger_connected",
+    "sensitivity": "low",
+    "description": "\u5145\u96FB\u5668\u63A5\u7D9A\u3092\u691C\u51FA\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "charger_disconnected",
+    "sensitivity": "low",
+    "description": "\u5145\u96FB\u5668\u5207\u65AD\u3092\u691C\u51FA\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "power_source_changed",
+    "sensitivity": "low",
+    "description": "AC / battery / short_term \u96FB\u6E90\u30E2\u30FC\u30C9\u306E\u9077\u79FB\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u524D\u306E\u96FB\u6E90\u7A2E\u5225 (\u521D\u56DE\u89B3\u6E2C\u6642\u306F \u0022unknown\u0022)\u3002",
+        "example": "battery"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u5F8C\u306E\u96FB\u6E90\u7A2E\u5225\u3002",
+        "example": "ac"
+      }
+    ]
+  },
+  {
+    "name": "ac_power_connected",
+    "sensitivity": "low",
+    "description": "AC \u96FB\u6E90\u63A5\u7D9A\u3092\u691C\u51FA\u3002\u76F4\u524D\u306E power_source_changed \u3068\u9023\u52D5\u3057\u3066\u767A\u706B\u3059\u308B\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u524D\u306E\u96FB\u6E90\u7A2E\u5225 (\u521D\u56DE\u89B3\u6E2C\u6642\u306F \u0022unknown\u0022)\u3002",
+        "example": "battery"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022ac\u0022.",
+        "example": "ac"
+      }
+    ]
+  },
+  {
+    "name": "battery_power_active",
+    "sensitivity": "low",
+    "description": "\u30D0\u30C3\u30C6\u30EA\u30FC\u99C6\u52D5\u3078\u306E\u5207\u66FF\u3092\u691C\u51FA\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u524D\u306E\u96FB\u6E90\u7A2E\u5225 (\u521D\u56DE\u89B3\u6E2C\u6642\u306F \u0022unknown\u0022)\u3002",
+        "example": "ac"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022battery\u0022.",
+        "example": "battery"
+      }
+    ]
+  },
+  {
+    "name": "short_term_power_active",
+    "sensitivity": "low",
+    "description": "\u77ED\u671F\u96FB\u6E90 (\u4F8B: UPS) \u3078\u306E\u5207\u66FF\u3092\u691C\u51FA\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u9077\u79FB\u524D\u306E\u96FB\u6E90\u7A2E\u5225 (\u521D\u56DE\u89B3\u6E2C\u6642\u306F \u0022unknown\u0022)\u3002",
+        "example": "ac"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022short_term\u0022.",
+        "example": "short_term"
+      }
+    ]
+  },
+  {
+    "name": "power_setting_changed",
+    "sensitivity": "low",
+    "description": "OS \u306E\u96FB\u6E90\u8A2D\u5B9A (AC/DC source, monitor power, lid switch \u306A\u3069) \u306E\u5909\u5316\u901A\u77E5\u3002",
+    "payloadKeys": [
+      {
+        "key": "setting",
+        "sensitivity": "low",
+        "description": "\u8A2D\u5B9A\u540D (\u4F8B: ac_dc_power_source, monitor_power_on)\u3002",
+        "example": "monitor_power_on"
+      },
+      {
+        "key": "guid",
+        "sensitivity": "low",
+        "description": "\u8A2D\u5B9A\u306E\u8B58\u5225\u5B50 (Windows: GUID \u8868\u8A18 / macOS: \u8A2D\u5B9A\u540D)\u3002",
+        "example": "02731015-4510-4526-99e6-e5a17ebd1aea"
+      },
+      {
+        "key": "value",
+        "sensitivity": "low",
+        "description": "\u6574\u5F62\u6E08\u307F\u306E\u5024 (\u4F8B: \u0022on\u0022 / \u0022off\u0022)\u3002",
+        "example": "on"
+      },
+      {
+        "key": "raw_value",
+        "sensitivity": "low",
+        "description": "\u751F\u306E\u6574\u6570\u5024\u3002",
+        "example": "1"
+      },
+      {
+        "key": "data_length",
+        "sensitivity": "low",
+        "description": "\u30DA\u30A4\u30ED\u30FC\u30C9\u306E\u30D0\u30A4\u30C8\u9577\u3002",
+        "example": "4"
+      }
+    ]
+  },
+  {
+    "name": "system_suspend",
+    "sensitivity": "low",
+    "description": "\u30B9\u30EA\u30FC\u30D7\u958B\u59CB\u3092\u691C\u51FA\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "system_resume_user",
+    "sensitivity": "low",
+    "description": "\u30E6\u30FC\u30B6\u30FC\u64CD\u4F5C\u306B\u3088\u308B\u30B9\u30EA\u30FC\u30D7\u5FA9\u5E30\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "system_resume_automatic",
+    "sensitivity": "low",
+    "description": "\u81EA\u52D5 (\u30BF\u30A4\u30DE\u30FC / Wake-on-LAN \u7B49) \u306B\u3088\u308B\u30B9\u30EA\u30FC\u30D7\u5FA9\u5E30\u3002Payload \u306A\u3057\u3002",
+    "payloadKeys": []
+  },
+  {
+    "name": "system_under_load",
+    "sensitivity": "low",
+    "description": "CPU / \u30E1\u30E2\u30EA pressure \u304C high \u4EE5\u4E0A\u306B\u9054\u3057\u305F\u3053\u3068\u3092\u901A\u77E5\u3002",
+    "payloadKeys": [
+      {
+        "key": "cpu_pressure",
+        "sensitivity": "low",
+        "description": "CPU \u5727\u8FEB\u30D0\u30B1\u30C3\u30C8 (\u4F8B: high / critical)\u3002",
+        "example": "high"
+      },
+      {
+        "key": "memory_pressure",
+        "sensitivity": "low",
+        "description": "\u30E1\u30E2\u30EA\u5727\u8FEB\u30D0\u30B1\u30C3\u30C8\u3002",
+        "example": "moderate"
+      }
+    ]
+  },
+  {
+    "name": "context_switch_burst",
+    "sensitivity": "medium",
+    "description": "\u77ED\u6642\u9593\u306B\u30D5\u30A9\u30A2\u30B0\u30E9\u30A6\u30F3\u30C9\u30A2\u30D7\u30EA\u5207\u66FF\u304C\u5897\u3048\u305F\u3053\u3068\u3092\u901A\u77E5\u3002\u4F5C\u696D\u30EA\u30BA\u30E0\u63A8\u6E2C\u306E\u6750\u6599\u3002",
+    "payloadKeys": [
+      {
+        "key": "switches_per_min",
+        "sensitivity": "medium",
+        "description": "\u76F4\u8FD1 1 \u5206\u306E\u5207\u66FF\u56DE\u6570\u3002",
+        "example": "42"
+      }
+    ]
+  },
+  {
+    "name": "media_session_changed",
+    "sensitivity": "medium",
+    "description": "OS \u306E\u30E1\u30C7\u30A3\u30A2\u30BB\u30C3\u30B7\u30E7\u30F3\u60C5\u5831 (Windows: SMTC / macOS: Music\u30FBSpotify) \u306E\u5185\u5BB9 (\u66F2\u30FB\u52D5\u753B\u30BF\u30A4\u30C8\u30EB\u7B49) \u304C\u5909\u308F\u3063\u305F\u77AC\u9593\u3002title / artist \u306F\u5225 path (.title / .artist) \u3067\u500B\u5225\u306B\u9AD8\u6A5F\u5FAE\u5206\u985E\u3055\u308C\u3066\u304A\u308A\u3001\u30E6\u30FC\u30B6\u30FC opt-in \u3068 context.high:read scope \u306E\u4E21\u65B9\u304C\u5FC5\u8981\u3002",
+    "payloadKeys": [
+      {
+        "key": "source_app",
+        "sensitivity": "medium",
+        "description": "\u518D\u751F\u5143\u30A2\u30D7\u30EA\u306E AppUserModelId (\u4F8B: Spotify, Chrome \u30BF\u30D6)\u3002",
+        "example": "Spotify.exe"
+      },
+      {
+        "key": "source_kind",
+        "sensitivity": "medium",
+        "description": "source_app \u304B\u3089\u63A8\u5B9A\u3057\u305F\u30E1\u30C7\u30A3\u30A2\u7A2E\u5225: \u0022music\u0022 / \u0022video\u0022 / \u0022browser\u0022 / \u0022unknown\u0022\u3002\u30D6\u30E9\u30A6\u30B6\u306F\u30BF\u30D6\u306E\u4E2D\u8EAB\u304C\u5224\u5B9A\u3067\u304D\u306A\u3044\u305F\u3081\u5225\u30AB\u30C6\u30B4\u30EA\u3002\u30D2\u30E5\u30FC\u30EA\u30B9\u30C6\u30A3\u30C3\u30AF\u306A\u306E\u3067\u8AA4\u5206\u985E\u306F\u3042\u308A\u5F97\u308B\u3002",
+        "example": "music"
+      },
+      {
+        "key": "playback_status",
+        "sensitivity": "medium",
+        "description": "Playing / Paused / Stopped\u3002",
+        "example": "Playing"
+      },
+      {
+        "key": "title",
+        "sensitivity": "high",
+        "description": "\u66F2\u540D / \u52D5\u753B\u30BF\u30A4\u30C8\u30EB\u3002\u8996\u8074\u5C65\u6B74\u305D\u306E\u3082\u306E\u3002",
+        "example": "Imagine"
+      },
+      {
+        "key": "artist",
+        "sensitivity": "high",
+        "description": "\u30A2\u30FC\u30C6\u30A3\u30B9\u30C8 / \u51FA\u6F14\u8005\u3002",
+        "example": "John Lennon"
+      },
+      {
+        "key": "album_title",
+        "sensitivity": "high",
+        "description": "\u30A2\u30EB\u30D0\u30E0\u540D\u3002",
+        "example": "Double Fantasy"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_started",
+    "sensitivity": "medium",
+    "description": "\u30E1\u30C7\u30A3\u30A2\u304C Playing \u72B6\u614B\u306B\u9077\u79FB\u3057\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u524D\u306E PlaybackStatus\u3002",
+        "example": "Paused"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u0022Playing\u0022.",
+        "example": "Playing"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_paused",
+    "sensitivity": "medium",
+    "description": "\u30E1\u30C7\u30A3\u30A2\u304C Paused \u72B6\u614B\u306B\u9077\u79FB\u3057\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u524D\u306E PlaybackStatus\u3002",
+        "example": "Playing"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u0022Paused\u0022.",
+        "example": "Paused"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_stopped",
+    "sensitivity": "medium",
+    "description": "\u30E1\u30C7\u30A3\u30A2\u304C Stopped \u72B6\u614B\u306B\u9077\u79FB\u3057\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u524D\u306E PlaybackStatus\u3002",
+        "example": "Playing"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u0022Stopped\u0022.",
+        "example": "Stopped"
+      }
+    ]
+  },
+  {
+    "name": "media_playback_status_changed",
+    "sensitivity": "medium",
+    "description": "PlaybackStatus \u304C\u4E0A\u8A18 3 \u72B6\u614B\u4EE5\u5916 (\u4F8B: Buffering) \u306B\u5909\u5316\u3057\u305F\u3068\u304D\u306E\u6C4E\u7528\u30A4\u30D9\u30F3\u30C8\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u524D\u306E PlaybackStatus\u3002",
+        "example": "Playing"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u5F8C\u306E PlaybackStatus\u3002",
+        "example": "Buffering"
+      }
+    ]
+  },
+  {
+    "name": "network_connectivity_changed",
+    "sensitivity": "low",
+    "description": "\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u63A5\u7D9A\u306E online / offline \u9077\u79FB\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "low",
+        "description": "\u0022online\u0022 or \u0022offline\u0022.",
+        "example": "offline"
+      },
+      {
+        "key": "to",
+        "sensitivity": "low",
+        "description": "\u0022online\u0022 or \u0022offline\u0022.",
+        "example": "online"
+      }
+    ]
+  },
+  {
+    "name": "timezone_changed",
+    "sensitivity": "medium",
+    "description": "\u30BF\u30A4\u30E0\u30BE\u30FC\u30F3 ID \u304C\u5909\u308F\u3063\u305F\u77AC\u9593\u3002\u79FB\u52D5\u3084 PC \u8A2D\u5B9A\u5909\u66F4\u3092\u793A\u5506\u3059\u308B\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u524D\u306E IANA / Windows TZ ID\u3002",
+        "example": "Tokyo Standard Time"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u5F8C\u306E TZ ID\u3002",
+        "example": "Pacific Standard Time"
+      }
+    ]
+  },
+  {
+    "name": "display_count_changed",
+    "sensitivity": "medium",
+    "description": "\u5916\u90E8\u30E2\u30CB\u30BF\u30FC\u306E\u63A5\u7D9A / \u89E3\u9664\u3067\u30C7\u30A3\u30B9\u30D7\u30EC\u30A4\u6570\u304C\u5909\u308F\u3063\u305F\u77AC\u9593\u3002",
+    "payloadKeys": [
+      {
+        "key": "from",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u524D\u306E\u30C7\u30A3\u30B9\u30D7\u30EC\u30A4\u6570\u3002",
+        "example": "1"
+      },
+      {
+        "key": "to",
+        "sensitivity": "medium",
+        "description": "\u9077\u79FB\u5F8C\u306E\u30C7\u30A3\u30B9\u30D7\u30EC\u30A4\u6570\u3002",
+        "example": "2"
+      }
+    ]
+  }
+]

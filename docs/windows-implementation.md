@@ -2,6 +2,8 @@
 
 WPF / WinForms から **WinUI 3 (Windows App SDK 1.8) へ移行**した後の実装をまとめる (v0.7.0〜)。
 
+macOS ネイティブ版の対応する実装メモは [macos-implementation.md](macos-implementation.md)。
+
 ## UI スタック / 配布形態
 
 - **UI フレームワーク**: WinUI 3 (`Microsoft.WindowsAppSDK` 1.8) + Win32 P/Invoke。設定ダイアログは WinUI 3 の `SettingsWindow` (Fluent / Mica)、トレイは Win32 `Shell_NotifyIcon` を直接呼び出す。

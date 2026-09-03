@@ -1,0 +1,307 @@
+{
+  "filterStates": [
+    {
+      "name": "states-defaults-only",
+      "overrides": {},
+      "states": [
+        {
+          "name": "presence.bucket",
+          "value": "active",
+          "sensitivity": "low"
+        },
+        {
+          "name": "presence.idleSeconds",
+          "value": "42",
+          "sensitivity": "medium"
+        },
+        {
+          "name": "foregroundApp.category",
+          "value": "editor",
+          "sensitivity": "medium"
+        },
+        {
+          "name": "foregroundApp.rawWindowTitle",
+          "value": "Program.cs - demo",
+          "sensitivity": "high"
+        },
+        {
+          "name": "media.title",
+          "value": "Imagine",
+          "sensitivity": "high"
+        },
+        {
+          "name": "battery.percent",
+          "value": "88",
+          "sensitivity": "low"
+        }
+      ],
+      "expectedStateNames": [
+        "presence.bucket",
+        "battery.percent"
+      ]
+    },
+    {
+      "name": "states-foreground-category-opt-in",
+      "overrides": {
+        "foregroundApp.category": true
+      },
+      "states": [
+        {
+          "name": "presence.bucket",
+          "value": "active",
+          "sensitivity": "low"
+        },
+        {
+          "name": "presence.idleSeconds",
+          "value": "42",
+          "sensitivity": "medium"
+        },
+        {
+          "name": "foregroundApp.category",
+          "value": "editor",
+          "sensitivity": "medium"
+        },
+        {
+          "name": "foregroundApp.rawWindowTitle",
+          "value": "Program.cs - demo",
+          "sensitivity": "high"
+        },
+        {
+          "name": "media.title",
+          "value": "Imagine",
+          "sensitivity": "high"
+        },
+        {
+          "name": "battery.percent",
+          "value": "88",
+          "sensitivity": "low"
+        }
+      ],
+      "expectedStateNames": [
+        "presence.bucket",
+        "foregroundApp.category",
+        "battery.percent"
+      ]
+    },
+    {
+      "name": "states-explicit-deny-overrides-default",
+      "overrides": {
+        "presence.bucket": false,
+        "media.title": true
+      },
+      "states": [
+        {
+          "name": "presence.bucket",
+          "value": "active",
+          "sensitivity": "low"
+        },
+        {
+          "name": "presence.idleSeconds",
+          "value": "42",
+          "sensitivity": "medium"
+        },
+        {
+          "name": "foregroundApp.category",
+          "value": "editor",
+          "sensitivity": "medium"
+        },
+        {
+          "name": "foregroundApp.rawWindowTitle",
+          "value": "Program.cs - demo",
+          "sensitivity": "high"
+        },
+        {
+          "name": "media.title",
+          "value": "Imagine",
+          "sensitivity": "high"
+        },
+        {
+          "name": "battery.percent",
+          "value": "88",
+          "sensitivity": "low"
+        }
+      ],
+      "expectedStateNames": [
+        "media.title",
+        "battery.percent"
+      ]
+    }
+  ],
+  "filterEvents": [
+    {
+      "name": "events-default-transmit-low-event",
+      "overrides": {},
+      "event": {
+        "name": "presence_bucket_changed",
+        "value": "idle",
+        "sensitivity": "low",
+        "payload": {
+          "from": "active",
+          "to": "idle"
+        }
+      },
+      "expectedDelivered": true,
+      "expectedPayloadKeys": [
+        "from",
+        "to"
+      ]
+    },
+    {
+      "name": "events-medium-event-dropped-without-opt-in",
+      "overrides": {},
+      "event": {
+        "name": "foreground_title_changed",
+        "value": "true",
+        "sensitivity": "medium",
+        "payload": {
+          "process_name": "Code.exe",
+          "titleSummary.file_ext": "cs",
+          "raw_window_title": "Program.cs - demo"
+        }
+      },
+      "expectedDelivered": false,
+      "expectedPayloadKeys": []
+    },
+    {
+      "name": "events-title-changed-strips-raw-title",
+      "overrides": {
+        "events.foreground_title_changed": true,
+        "events.foreground_title_changed.titleSummary": true
+      },
+      "event": {
+        "name": "foreground_title_changed",
+        "value": "true",
+        "sensitivity": "medium",
+        "payload": {
+          "process_name": "Code.exe",
+          "titleSummary.file_ext": "cs",
+          "raw_window_title": "Program.cs - demo"
+        }
+      },
+      "expectedDelivered": true,
+      "expectedPayloadKeys": [
+        "process_name",
+        "titleSummary.file_ext"
+      ]
+    },
+    {
+      "name": "events-title-changed-raw-title-opt-in",
+      "overrides": {
+        "events.foreground_title_changed": true,
+        "events.foreground_title_changed.raw_window_title": true
+      },
+      "event": {
+        "name": "foreground_title_changed",
+        "value": "true",
+        "sensitivity": "medium",
+        "payload": {
+          "process_name": "Code.exe",
+          "titleSummary.file_ext": "cs",
+          "raw_window_title": "Program.cs - demo"
+        }
+      },
+      "expectedDelivered": true,
+      "expectedPayloadKeys": [
+        "process_name",
+        "titleSummary.file_ext",
+        "raw_window_title"
+      ]
+    },
+    {
+      "name": "events-media-overview-only",
+      "overrides": {
+        "events.media_session_changed": true
+      },
+      "event": {
+        "name": "media_session_changed",
+        "value": "Imagine",
+        "sensitivity": "medium",
+        "payload": {
+          "source_app": "Chrome",
+          "title": "Imagine",
+          "artist": "John Lennon"
+        }
+      },
+      "expectedDelivered": true,
+      "expectedPayloadKeys": [
+        "source_app"
+      ]
+    },
+    {
+      "name": "events-media-title-opt-in",
+      "overrides": {
+        "events.media_session_changed": true,
+        "events.media_session_changed.title": true
+      },
+      "event": {
+        "name": "media_session_changed",
+        "value": "Imagine",
+        "sensitivity": "medium",
+        "payload": {
+          "source_app": "Chrome",
+          "title": "Imagine",
+          "artist": "John Lennon"
+        }
+      },
+      "expectedDelivered": true,
+      "expectedPayloadKeys": [
+        "source_app",
+        "title"
+      ]
+    }
+  ],
+  "mergeOverrides": [
+    {
+      "name": "merge-media-overview-only",
+      "existingOverrides": {},
+      "enabledOptionIds": [
+        "media.overview"
+      ],
+      "expectedOverrides": {
+        "events.media_playback_paused": true,
+        "events.media_playback_started": true,
+        "events.media_session_changed": true,
+        "media.isAvailable": true,
+        "media.playbackStatus": true,
+        "media.sourceAppUserModelId": true
+      }
+    },
+    {
+      "name": "merge-media-overview-and-title",
+      "existingOverrides": {},
+      "enabledOptionIds": [
+        "media.overview",
+        "media.title"
+      ],
+      "expectedOverrides": {
+        "events.media_playback_paused": true,
+        "events.media_playback_started": true,
+        "events.media_session_changed": true,
+        "events.media_session_changed.title": true,
+        "media.isAvailable": true,
+        "media.playbackStatus": true,
+        "media.sourceAppUserModelId": true,
+        "media.title": true
+      }
+    },
+    {
+      "name": "merge-keeps-unmanaged-override",
+      "existingOverrides": {
+        "legacy.custom.path": true
+      },
+      "enabledOptionIds": [],
+      "expectedOverrides": {
+        "legacy.custom.path": true
+      }
+    },
+    {
+      "name": "merge-disable-removes-managed-paths",
+      "existingOverrides": {
+        "media.title": true,
+        "events.media_session_changed": true
+      },
+      "enabledOptionIds": [],
+      "expectedOverrides": {}
+    }
+  ]
+}

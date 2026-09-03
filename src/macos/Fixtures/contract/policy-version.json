@@ -1,0 +1,735 @@
+[
+  {
+    "name": "full-catalog-no-overrides",
+    "classifications": [
+      {
+        "path": "presence.bucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "presence.idleSeconds",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "presence.sessionLocked",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.presence_bucket_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.user_returned",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.user_became_idle",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.session_locked",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.session_unlocked",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.session_logon",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.session_logoff",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.category",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.appName",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.processName",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.rawWindowTitle",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.titleSummary",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_title_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_title_changed.titleSummary",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_title_changed.raw_window_title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_app_category_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "activity.contextSwitchesPerMin",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.context_switch_burst",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "battery.bucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "battery.percent",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "battery.charging",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_percent_crossed_threshold",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_medium",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_low",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_critical",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.charger_connected",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.charger_disconnected",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "power.lastKnownSettings",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.power_setting_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.power_source_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.ac_power_connected",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_power_active",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.short_term_power_active",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_suspend",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_resume_user",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_resume_automatic",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "network.isAvailable",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.network_connectivity_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "media.isAvailable",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.playbackStatus",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.sourceAppUserModelId",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.artist",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.albumTitle",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.positionMilliseconds",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.sessions",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_started",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_paused",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_stopped",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_status_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed.title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed.artist",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed.album_title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "system.timeZoneId",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "system.uptimeSeconds",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "system.cpuPressureBucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "system.memoryPressureBucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "wellness.continuousActiveMinutes",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "wellness.minutesSinceLastBreak",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_under_load",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.long_session_warning",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.first_activity_today",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "display.count",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "displays",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.timezone_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.display_count_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      }
+    ],
+    "overrides": {},
+    "expected": "SWBDs53a7Yg6"
+  },
+  {
+    "name": "full-catalog-two-overrides",
+    "classifications": [
+      {
+        "path": "presence.bucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "presence.idleSeconds",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "presence.sessionLocked",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.presence_bucket_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.user_returned",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.user_became_idle",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.session_locked",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.session_unlocked",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.session_logon",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.session_logoff",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.category",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.appName",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.processName",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.rawWindowTitle",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "foregroundApp.titleSummary",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_title_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_title_changed.titleSummary",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_title_changed.raw_window_title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_app_category_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "activity.contextSwitchesPerMin",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.context_switch_burst",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "battery.bucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "battery.percent",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "battery.charging",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_percent_crossed_threshold",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_medium",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_low",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_critical",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.charger_connected",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.charger_disconnected",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "power.lastKnownSettings",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.power_setting_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.power_source_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.ac_power_connected",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.battery_power_active",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.short_term_power_active",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_suspend",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_resume_user",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_resume_automatic",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "network.isAvailable",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.network_connectivity_changed",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "media.isAvailable",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.playbackStatus",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.sourceAppUserModelId",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.artist",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.albumTitle",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.positionMilliseconds",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "media.sessions",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_started",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_paused",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_stopped",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_playback_status_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed.title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed.artist",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed.album_title",
+        "sensitivity": "high",
+        "defaultTransmit": false
+      },
+      {
+        "path": "system.timeZoneId",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "system.uptimeSeconds",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "system.cpuPressureBucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "system.memoryPressureBucket",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "wellness.continuousActiveMinutes",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "wellness.minutesSinceLastBreak",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.system_under_load",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.long_session_warning",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "events.first_activity_today",
+        "sensitivity": "low",
+        "defaultTransmit": true
+      },
+      {
+        "path": "display.count",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "displays",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.timezone_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.display_count_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.foreground_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      },
+      {
+        "path": "events.media_session_changed",
+        "sensitivity": "medium",
+        "defaultTransmit": false
+      }
+    ],
+    "overrides": {
+      "foregroundApp.category": true,
+      "media.title": false
+    },
+    "expected": "lL3E4xQ7fClG"
+  },
+  {
+    "name": "empty-catalog-no-overrides",
+    "classifications": [],
+    "overrides": {},
+    "expected": "47DEQpj8HBSa"
+  }
+]

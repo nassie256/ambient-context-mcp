@@ -1,0 +1,38 @@
+{
+  "cursors": [
+    {
+      "sequence": 0,
+      "cursor": "c2VxOjA"
+    },
+    {
+      "sequence": 1,
+      "cursor": "c2VxOjE"
+    },
+    {
+      "sequence": 42,
+      "cursor": "c2VxOjQy"
+    },
+    {
+      "sequence": 1000000,
+      "cursor": "c2VxOjEwMDAwMDA"
+    }
+  ],
+  "eventIdFormat": "evt_{observedAt.UtcDateTime:yyyyMMddHHmmssfff}_{sequence:D6}",
+  "eventIds": [
+    {
+      "observedAtUtc": "2026-05-23T03:00:00.000Z",
+      "sequence": 1,
+      "id": "evt_20260523030000000_000001"
+    },
+    {
+      "observedAtUtc": "2026-05-23T03:00:01.250Z",
+      "sequence": 2,
+      "id": "evt_20260523030001250_000002"
+    },
+    {
+      "observedAtUtc": "2026-01-02T03:04:05.006Z",
+      "sequence": 3,
+      "id": "evt_20260102030405006_000003"
+    }
+  ]
+}

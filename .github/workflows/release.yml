@@ -15,13 +15,55 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: windows-latest
+  prepare:
+    # バージョン解決と manifest の整合チェックだけを行う軽量ジョブ。
+    # build-windows / build-macos の双方が同じ値を使えるように先頭に切り出している。
+    runs-on: ubuntu-latest
 
     outputs:
       version: ${{ steps.ver.outputs.version }}
       tag: ${{ steps.ver.outputs.tag }}
-      mcpb_sha256: ${{ steps.hashes.outputs.mcpb_sha256 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            version='${{ inputs.version }}'
+          else
+            # github.ref_name is e.g. "v0.4.0"; strip the leading "v".
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          if [ -z "$version" ]; then
+            echo "Could not resolve version from tag or input." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version"    >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $version"
+
+      - name: Verify manifest.json version matches tag
+        run: |
+          manifest_version="$(jq -r .version mcpb/manifest.json)"
+          if [ "$manifest_version" != "${{ steps.ver.outputs.version }}" ]; then
+            echo "mcpb/manifest.json version ($manifest_version) does not match tag (${{ steps.ver.outputs.version }}). Bump the manifest before tagging." >&2
+            exit 1
+          fi
+
+      - name: Verify release notes exist
+        run: |
+          src="docs/release-notes/v${{ steps.ver.outputs.version }}.md"
+          if [ ! -f "$src" ]; then
+            echo "Release notes not found: $src. Commit the file before tagging." >&2
+            exit 1
+          fi
+
+  build-windows:
+    needs: prepare
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -32,6 +74,78 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Build release artifacts (zip + server staging)
+        shell: pwsh
+        # .mcpb は macOS 側の成果物と合わせて `package` ジョブで作るので、ここでは
+        # -SkipMcpb で zip と dist/release-staging/server/ だけを出す。
+        run: pwsh tools/build-release.ps1 -Version '${{ needs.prepare.outputs.version }}' -SkipMcpb
+
+      - name: Upload Windows zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-zip
+          path: dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}-win-x64.zip
+          if-no-files-found: error
+
+      - name: Upload Windows server payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-server
+          path: dist/release-staging/server
+          if-no-files-found: error
+
+  build-macos:
+    needs: prepare
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: swift --version
+        run: swift --version
+
+      - name: swift test
+        working-directory: src/macos
+        run: swift test
+
+      - name: Build release artifacts (zip + dmg)
+        run: ./src/macos/scripts/package-release.sh --version '${{ needs.prepare.outputs.version }}'
+
+      - name: Upload macOS zip / dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-archives
+          path: |
+            dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}-macos-universal.zip
+            dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}-macos-universal.dmg
+          if-no-files-found: error
+
+      - name: Pack macOS server payload
+        # upload-artifact は実行ビット・シンボリックリンクを保てないため、.app は
+        # tar に固めてから渡す (展開後に codesign が壊れないようにする)。
+        run: tar -czf mac-server.tar.gz -C dist/macos .
+
+      - name: Upload macOS server payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-server
+          path: mac-server.tar.gz
+          if-no-files-found: error
+
+  package:
+    # win / mac 両方の server/ を 1 つの .mcpb にまとめ、4 成果物の Release を作る。
+    # .app の実行ビットと署名を保つため macOS ランナーで実行する。
+    needs: [prepare, build-windows, build-macos]
+    runs-on: macos-latest
+
+    outputs:
+      mcpb_sha256: ${{ steps.hashes.outputs.mcpb_sha256 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
@@ -40,97 +154,114 @@ jobs:
       - name: Install mcpb CLI
         run: npm i -g @anthropic-ai/mcpb
 
-      - name: Resolve version
-        id: ver
-        shell: pwsh
-        run: |
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            $version = '${{ inputs.version }}'
-          } else {
-            # github.ref_name is e.g. "v0.4.0"; strip the leading "v".
-            $version = '${{ github.ref_name }}' -replace '^v', ''
-          }
-          if ([string]::IsNullOrWhiteSpace($version)) {
-            throw "Could not resolve version from tag or input."
-          }
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "tag=v$version"    | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "Resolved version: $version"
+      - name: Download Windows zip
+        uses: actions/download-artifact@v4
+        with:
+          name: win-zip
+          path: dist
 
-      - name: Verify manifest.json version matches tag
-        shell: pwsh
-        run: |
-          $manifest = Get-Content -Raw mcpb/manifest.json | ConvertFrom-Json
-          if ($manifest.version -ne '${{ steps.ver.outputs.version }}') {
-            throw "mcpb/manifest.json version ($($manifest.version)) does not match tag (${{ steps.ver.outputs.version }}). Bump the manifest before tagging."
-          }
+      - name: Download Windows server payload
+        uses: actions/download-artifact@v4
+        with:
+          name: win-server
+          path: dist/win-server
 
-      - name: Build release artifacts (zip + mcpb)
-        shell: pwsh
-        run: pwsh tools/build-release.ps1 -Version '${{ steps.ver.outputs.version }}'
+      - name: Download macOS archives
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-archives
+          path: dist
+
+      - name: Download macOS server payload
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-server
+          path: dist
+
+      - name: Unpack macOS server payload
+        run: |
+          mkdir -p dist/macos
+          tar -xzf dist/mac-server.tar.gz -C dist/macos
+          rm dist/mac-server.tar.gz
+          ls -la dist/macos
+
+      - name: Assemble cross-platform .mcpb
+        run: |
+          ./src/macos/scripts/assemble-mcpb.sh \
+            --version '${{ needs.prepare.outputs.version }}' \
+            --win-server dist/win-server \
+            --mac-server dist/macos
 
       - name: Compute checksums
         id: hashes
-        shell: pwsh
         run: |
-          $zip  = "dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}-win-x64.zip"
-          $mcpb = "dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}.mcpb"
-          $zipHash  = (Get-FileHash $zip  -Algorithm SHA256).Hash.ToLowerInvariant()
-          $mcpbHash = (Get-FileHash $mcpb -Algorithm SHA256).Hash.ToLowerInvariant()
-          "zip_sha256=$zipHash"   | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "mcpb_sha256=$mcpbHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "zip  sha256: $zipHash"
-          Write-Host "mcpb sha256: $mcpbHash"
+          tag='${{ needs.prepare.outputs.tag }}'
+          win_zip="dist/ambient-context-mcp-$tag-win-x64.zip"
+          mac_zip="dist/ambient-context-mcp-$tag-macos-universal.zip"
+          mac_dmg="dist/ambient-context-mcp-$tag-macos-universal.dmg"
+          mcpb="dist/ambient-context-mcp-$tag.mcpb"
+          for f in "$win_zip" "$mac_zip" "$mac_dmg" "$mcpb"; do
+            [ -f "$f" ] || { echo "missing artifact: $f" >&2; exit 1; }
+          done
+          {
+            echo "win_zip_sha256=$(shasum -a 256 "$win_zip" | awk '{print $1}')"
+            echo "mac_zip_sha256=$(shasum -a 256 "$mac_zip" | awk '{print $1}')"
+            echo "mac_dmg_sha256=$(shasum -a 256 "$mac_dmg" | awk '{print $1}')"
+            echo "mcpb_sha256=$(shasum -a 256 "$mcpb" | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
+          shasum -a 256 "$win_zip" "$mac_zip" "$mac_dmg" "$mcpb"
 
-      - name: Upload workflow artifacts
+      - name: Upload combined artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ steps.ver.outputs.tag }}
+          name: release-${{ needs.prepare.outputs.tag }}
           path: |
-            dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}-win-x64.zip
-            dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}.mcpb
+            dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}-win-x64.zip
+            dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}-macos-universal.zip
+            dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}-macos-universal.dmg
+            dist/ambient-context-mcp-${{ needs.prepare.outputs.tag }}.mcpb
 
       - name: Prepare release notes
         id: notes
-        shell: pwsh
+        # 再実行 (workflow_dispatch) でも冪等になるよう、元ファイルは書き換えず別パスに出す。
         run: |
-          $src = "docs/release-notes/v${{ steps.ver.outputs.version }}.md"
-          if (-not (Test-Path $src)) {
-            throw "Release notes not found: $src. Commit the file before tagging."
-          }
-
-          # Write to a separate path so re-runs (e.g. workflow_dispatch) stay
-          # idempotent and the source file is never mutated.
-          $dst = Join-Path $env:RUNNER_TEMP "release-notes-final.md"
-          $body = Get-Content -Raw $src
-          $body += "`n`n### Checksums`n`n"
-          $body += "| File | SHA-256 |`n"
-          $body += "|---|---|`n"
-          $body += "| ambient-context-mcp-${{ steps.ver.outputs.tag }}-win-x64.zip | ``${{ steps.hashes.outputs.zip_sha256 }}`` |`n"
-          $body += "| ambient-context-mcp-${{ steps.ver.outputs.tag }}.mcpb | ``${{ steps.hashes.outputs.mcpb_sha256 }}`` |`n"
-          Set-Content -Path $dst -Value $body -NoNewline
-          "path=$dst" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          tag='${{ needs.prepare.outputs.tag }}'
+          src="docs/release-notes/v${{ needs.prepare.outputs.version }}.md"
+          dst="$RUNNER_TEMP/release-notes-final.md"
+          {
+            cat "$src"
+            printf '\n\n### Checksums\n\n'
+            printf '| File | SHA-256 |\n'
+            printf '|---|---|\n'
+            printf '| ambient-context-mcp-%s-win-x64.zip | `%s` |\n'          "$tag" '${{ steps.hashes.outputs.win_zip_sha256 }}'
+            printf '| ambient-context-mcp-%s-macos-universal.zip | `%s` |\n'  "$tag" '${{ steps.hashes.outputs.mac_zip_sha256 }}'
+            printf '| ambient-context-mcp-%s-macos-universal.dmg | `%s` |\n'  "$tag" '${{ steps.hashes.outputs.mac_dmg_sha256 }}'
+            printf '| ambient-context-mcp-%s.mcpb | `%s` |\n'                 "$tag" '${{ steps.hashes.outputs.mcpb_sha256 }}'
+          } > "$dst"
+          echo "path=$dst" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: pwsh
         run: |
-          gh release create '${{ steps.ver.outputs.tag }}' `
-            --title 'Ambient Context MCP ${{ steps.ver.outputs.tag }}' `
-            --notes-file '${{ steps.notes.outputs.path }}' `
-            "dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}-win-x64.zip" `
-            "dist/ambient-context-mcp-${{ steps.ver.outputs.tag }}.mcpb"
+          tag='${{ needs.prepare.outputs.tag }}'
+          gh release create "$tag" \
+            --title "Ambient Context MCP $tag" \
+            --notes-file '${{ steps.notes.outputs.path }}' \
+            "dist/ambient-context-mcp-$tag-win-x64.zip" \
+            "dist/ambient-context-mcp-$tag-macos-universal.zip" \
+            "dist/ambient-context-mcp-$tag-macos-universal.dmg" \
+            "dist/ambient-context-mcp-$tag.mcpb"
 
   publish-registry:
     # Publishes server.json to the official MCP Registry
     # (https://registry.modelcontextprotocol.io). Only runs on real tag pushes;
-    # workflow_dispatch runs stop after `build` for dry-running the artifacts.
+    # workflow_dispatch runs stop after `package` for dry-running the artifacts.
     # The registry rejects re-publishes of the same version, so a failure here
     # forces a patch bump rather than a retry on the same tag.
     if: github.event_name == 'push'
-    needs: build
+    needs: [prepare, package]
     runs-on: ubuntu-latest
 
     permissions:
@@ -152,10 +283,10 @@ jobs:
 
       - name: Rewrite server.json for this release
         env:
-          VERSION:    ${{ needs.build.outputs.version }}
-          TAG:        ${{ needs.build.outputs.tag }}
-          MCPB_SHA:   ${{ needs.build.outputs.mcpb_sha256 }}
-          IDENTIFIER: https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/ambient-context-mcp-${{ needs.build.outputs.tag }}.mcpb
+          VERSION:    ${{ needs.prepare.outputs.version }}
+          TAG:        ${{ needs.prepare.outputs.tag }}
+          MCPB_SHA:   ${{ needs.package.outputs.mcpb_sha256 }}
+          IDENTIFIER: https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare.outputs.tag }}/ambient-context-mcp-${{ needs.prepare.outputs.tag }}.mcpb
         run: |
           jq \
             --arg v "$VERSION" \
