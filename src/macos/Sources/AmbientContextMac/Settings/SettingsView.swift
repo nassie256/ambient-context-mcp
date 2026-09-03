@@ -241,6 +241,21 @@ struct TriStateCheckbox: NSViewRepresentable {
         nsView.state = state
     }
 
+    /// `NSViewRepresentable` は既定で「提案されたサイズをそのまま使う」と答えるため、
+    /// `VStack` の中に置くと残りの高さを全部取ってしまい、兄弟の GroupBox / ScrollView が
+    /// 高さ 0 に潰れる (送信設定タブが説明文とこのチェックボックスだけに見えたバグ)。
+    /// `NSButton` 本来の `fittingSize` を返して自然な高さ (1 行) に収める。
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSButton, context: Context) -> CGSize? {
+        nsView.title = title
+        let fitting = nsView.fittingSize
+        // 高さは常に fittingSize。幅は有限の提案があればそれに合わせる (ラベルは左寄せ)。
+        var width = fitting.width
+        if let proposed = proposal.width, proposed.isFinite {
+            width = max(proposed, fitting.width)
+        }
+        return CGSize(width: width, height: fitting.height)
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(state: state, onClick: onClick)
     }

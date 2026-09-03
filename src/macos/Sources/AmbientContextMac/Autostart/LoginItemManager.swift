@@ -80,7 +80,13 @@ enum LoginItemManager {
                     try SMAppService.mainApp.register()
                 }
             } else {
-                if status != .notRegistered {
+                // 一度も register() していない .app の status は `.notFound` になる。
+                // その状態で unregister() を呼ぶと SMAppServiceErrorDomain code=1
+                // ("Operation not permitted") を投げるので、登録済み
+                // (`.enabled` / `.requiresApproval`) のときだけ解除する。
+                // `.notFound` / `.notRegistered` は「既に無効」なので C#
+                // `AutostartManager.Disable()` (値が無ければ何もしない) と同じく no-op。
+                if isEnabled {
                     try SMAppService.mainApp.unregister()
                 }
             }

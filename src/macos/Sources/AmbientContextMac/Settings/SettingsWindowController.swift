@@ -21,6 +21,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// `setFrameAutosaveName` / `setFrameUsingName` に使う名前 (UserDefaults のキーになる)。
     static let frameAutosaveName = "SettingsWindow"
 
+    /// C# `SettingsWindowPlacement` と同じ既定値 / 下限。
+    static let defaultWidth: CGFloat = 720
+    static let defaultHeight: CGFloat = 760
+    static let minWidth: CGFloat = 480
+    static let minHeight: CGFloat = 480
+
     private var window: NSWindow?
     private var model: SettingsViewModel?
 
@@ -63,6 +69,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             catalogLanguage: catalogLanguage)
         let controller = NSHostingController(
             rootView: SettingsView(model: model, onClose: { [weak self] in self?.close() }))
+        // 既定の sizingOptions には `.minSize` が入っていて、SwiftUI コンテンツの最小サイズが
+        // そのままウィンドウの `contentMinSize` を上書きしてしまう。その結果ウィンドウが
+        // 画面より高いまま縮められなくなるので、サイズ制約は下の `contentMinSize` だけに任せる。
+        controller.sizingOptions = []
 
         let window = NSWindow(contentViewController: controller)
         window.title = Strings.windowTitle
@@ -70,12 +80,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.styleMask = [.titled, .closable, .resizable]
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.contentMinSize = NSSize(width: 480, height: 480)
-        window.setContentSize(NSSize(width: 720, height: 760))
+        window.contentMinSize = NSSize(width: Self.minWidth, height: Self.minHeight)
+        window.setContentSize(NSSize(width: Self.defaultWidth, height: Self.defaultHeight))
         // setFrameAutosaveName は「以後の変更を保存する」だけ。素の NSWindow には
         // NSWindowController のような自動復元が無いので、保存済みフレームは自分で読む。
         window.setFrameAutosaveName(Self.frameAutosaveName)
-        window.setFrameUsingName(Self.frameAutosaveName)
+        let restored = window.setFrameUsingName(Self.frameAutosaveName)
+        Self.applyPlacement(to: window, restored: restored)
         model.hostWindow = window
 
         self.window = window
@@ -92,6 +103,32 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 "frame": .string(NSStringFromRect(window.frame)),
                 "appWindows": .int(NSApp.windows.count)
             ])
+    }
+
+    /// C# `SettingsWindowPlacement.Apply` 相当。復元したフレームを作業領域 (メニューバー /
+    /// Dock を除いた領域) に収める。
+    ///
+    /// `setFrameUsingName` は保存時のサイズをそのまま復元するので、以前に画面より高い
+    /// ウィンドウを保存していると画面外にはみ出したまま開いてしまう。サイズは
+    /// `minWidth/minHeight`〜作業領域に clamp し、位置もタイトルバーを掴める範囲へ寄せる。
+    /// 初回 (復元なし) は既定サイズで作業領域の中央に置く。
+    private static func applyPlacement(to window: NSWindow, restored: Bool) {
+        let screen = window.screen ?? NSScreen.main
+        guard let visible = screen?.visibleFrame else { return }
+
+        var frame = window.frame
+        frame.size.width = min(max(frame.width, minWidth), visible.width)
+        frame.size.height = min(max(frame.height, minHeight), visible.height)
+
+        if restored {
+            frame.origin.x = min(max(frame.minX, visible.minX), visible.maxX - frame.width)
+            frame.origin.y = min(max(frame.minY, visible.minY), visible.maxY - frame.height)
+        } else {
+            frame.origin.x = visible.minX + (visible.width - frame.width) / 2
+            frame.origin.y = visible.minY + (visible.height - frame.height) / 2
+        }
+
+        window.setFrame(frame, display: false)
     }
 
     func close() {
