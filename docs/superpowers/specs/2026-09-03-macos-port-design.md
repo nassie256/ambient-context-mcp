@@ -333,6 +333,13 @@ Windows 版と macOS 版は別実装になるため、以下を CI で機械的�
 2. **中**: 設定ウィンドウが Accessibility API から見えない (`AXWindow` が列挙されない)
 3. **低**: `includePayload=false` で `payload` / `payloadSensitivity` が省略されず `{}` になる。Windows も同じ挙動で `docs/tool-spec.md` との不一致 (文書側を修正)
 
+#### 7.1.1 人手による確認 (2026-09-03、画面ロック解除状態)
+
+- `/Applications` からの起動、メニューバーの左クリック (設定) / 右クリック (メニュー) を確認
+- 初回の実機確認で 3 件の不具合が見つかり修正済み (`8221beb`): ログイン項目 OFF で保存すると未登録なのに `unregister()` して失敗する / 送信設定タブの一覧が `NSViewRepresentable` のサイズ未宣言で潰れる / ウィンドウが画面より高く縮められない (復元フレームの未クランプ + `sizingOptions`)
+- 修正後: 設定ウィンドウのサイズ変更、送信設定の一覧表示、ログイン項目 OFF / ON の保存 (システム設定のログイン項目に登録されることを確認) が合格
+- 未確認: 再ログイン時の実際の自動起動、Intel 実機、`mcpb validate` (CI 初回実行時)
+
 ### 7.2 Phase 6 の結果 (2026-09-03)
 
 - パリティ整理: カタログ文言の OS 中立化と `MediaSourceKindClassifier` の bundle id 追加を C# / Swift 同時に適用、フィクスチャ再生成 (C# 78 / Swift 155 テスト)
