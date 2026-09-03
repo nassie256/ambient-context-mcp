@@ -112,7 +112,7 @@
 
 /* ----- macOS only: permissions and login item ----- */
 "MacPermissionAccessibilityTitle" = "Accessibility permission required";
-"MacPermissionAccessibilityMessage" = "Window title contexts are enabled, but Ambient Context MCP is not allowed to use the Accessibility API yet. Until you allow it in System Settings → Privacy & Security → Accessibility, the window title stays empty.";
+"MacPermissionAccessibilityMessage" = "Window title contexts are enabled, but Ambient Context MCP is not allowed to use the Accessibility API yet. Until you allow it in System Settings → Privacy & Security → Accessibility, the window title stays empty.\n\nAfter allowing it, you may need to quit and reopen Ambient Context MCP for the permission to take effect.\n\nIf the app was updated or replaced after you allowed it, macOS keeps the old entry: remove \"Ambient Context MCP\" from the Accessibility list and add it again.";
 "MacPermissionAutomationTitle" = "Automation permission required";
 "MacPermissionAutomationMessage" = "Media contexts are enabled. The first time Music or Spotify is running during a capture, macOS asks whether Ambient Context MCP may control it. If you decline, media information stays empty; you can change the answer later in System Settings → Privacy & Security → Automation.";
 "MacPermissionOpenSettings" = "Open System Settings";

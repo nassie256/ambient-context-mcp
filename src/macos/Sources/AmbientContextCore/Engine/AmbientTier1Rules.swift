@@ -108,6 +108,8 @@ public struct AppClassificationTable: Sendable, Hashable {
         ("us.zoom.xos", "communication", "Zoom"),
         ("com.apple.MobileSMS", "communication", "Messages"),
         ("com.apple.mail", "communication", "Mail"),
+        ("com.anthropic.claudefordesktop", "communication", "Claude"),
+        ("com.openai.codex", "communication", "ChatGPT"),
         // media
         ("com.spotify.client", "media", "Spotify"),
         ("com.apple.Music", "media", "Music"),
@@ -121,6 +123,7 @@ public struct AppClassificationTable: Sendable, Hashable {
         ("dev.warp.Warp-Stable", "terminal", "Warp"),
         ("net.kovidgoyal.kitty", "terminal", "kitty"),
         ("com.github.wez.wezterm", "terminal", "WezTerm"),
+        ("com.mitchellh.ghostty", "terminal", "Ghostty"),
         // document
         ("com.microsoft.Word", "document", "Word"),
         ("com.microsoft.Excel", "document", "Excel"),

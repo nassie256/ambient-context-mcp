@@ -20,11 +20,45 @@ public struct ForegroundAppCollector {
 
     public init() {}
 
+    /// 1 回の収集結果。`context` はスナップショットに載る値、それ以外は診断ログ専用
+    /// (MCP の状態パスには出さない)。
+    public struct CollectResult: Sendable {
+        public var context: ForegroundAppContext
+        /// 分類に使った bundle id (取れないアプリでは実行ファイル名)。診断ログ用。
+        public var bundleId: String
+        /// `TitleResult.reason`。空ならタイトル取得に成功、または AX を呼んでいない。
+        public var titleReason: String
+        /// AX 呼び出し時点の `AXIsProcessTrusted()`。
+        public var accessibilityTrusted: Bool
+
+        public init(
+            context: ForegroundAppContext,
+            bundleId: String,
+            titleReason: String,
+            accessibilityTrusted: Bool
+        ) {
+            self.context = context
+            self.bundleId = bundleId
+            self.titleReason = titleReason
+            self.accessibilityTrusted = accessibilityTrusted
+        }
+    }
+
     /// - Parameter titleCaptureEnabled: 送信ポリシー上タイトルが必要かどうか
     ///   (`CaptureFeatureFlags.isTitleCaptureEnabled`)。false なら AX を呼ばない。
     public func collect(titleCaptureEnabled: Bool) -> ForegroundAppContext {
+        collectDetailed(titleCaptureEnabled: titleCaptureEnabled).context
+    }
+
+    /// `collect` に AX の degrade 理由を添えて返す。呼び出し側 (`MacAmbientContextService`) が
+    /// 理由の**変化時だけ**診断ログに残すために使う。
+    public func collectDetailed(titleCaptureEnabled: Bool) -> CollectResult {
         guard let app = NSWorkspace.shared.frontmostApplication else {
-            return ForegroundAppContext()
+            return CollectResult(
+                context: ForegroundAppContext(),
+                bundleId: "",
+                titleReason: "",
+                accessibilityTrusted: titleCaptureEnabled ? AXIsProcessTrusted() : false)
         }
 
         let executableName = app.executableURL?.lastPathComponent ?? ""
@@ -38,11 +72,16 @@ public struct ForegroundAppCollector {
 
         let pid = app.processIdentifier
         var title = ""
+        var titleReason = ""
+        var trusted = false
         if titleCaptureEnabled {
-            title = Self.focusedWindowTitle(pid: pid).title
+            trusted = AXIsProcessTrusted()
+            let result = Self.focusedWindowTitle(pid: pid)
+            title = result.title
+            titleReason = result.reason
         }
 
-        return ForegroundAppContext(
+        let context = ForegroundAppContext(
             processName: executableName,
             processId: pid == 0 ? nil : Int(pid),
             appName: classification.appName,
@@ -53,6 +92,12 @@ public struct ForegroundAppCollector {
                 category: classification.category,
                 title: title,
                 rules: .macOS))
+
+        return CollectResult(
+            context: context,
+            bundleId: classificationKey,
+            titleReason: titleReason,
+            accessibilityTrusted: trusted)
     }
 
     /// AX 取得の結果。`reason` は空なら成功、そうでなければ degrade 理由
@@ -69,7 +114,10 @@ public struct ForegroundAppCollector {
 
     /// アクセシビリティ権限の現在値。プロンプトは出さない
     /// (`AXIsProcessTrustedWithOptions(prompt: true)` は Phase 4 の権限誘導が担当する)。
-    public static func isAccessibilityTrusted() -> Bool {
+    /// `AXIsProcessTrusted()` はスレッドセーフでブロックしない (TCC のキャッシュを読むだけ) ので、
+    /// MainActor へホップせずに呼べるよう `nonisolated` にしておく。actor から
+    /// 起動時 / 設定再読込時の診断ログを取るために使う。
+    public nonisolated static func isAccessibilityTrusted() -> Bool {
         AXIsProcessTrusted()
     }
 

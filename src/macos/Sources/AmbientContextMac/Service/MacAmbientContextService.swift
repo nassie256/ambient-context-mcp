@@ -74,6 +74,12 @@ public actor MacAmbientContextService {
     /// 直近の定期 capture の要求時刻 (cadence drift の計測用)。
     private var lastPeriodicCaptureAt: Date?
 
+    /// 直近の AX タイトル取得の degrade 理由 (`ForegroundAppCollector.TitleResult.reason`)。
+    /// 60 秒ごとに同じ行を積まないよう、**変化したときだけ** 診断ログに出すための前回値。
+    private var lastTitleReason = ""
+    /// degrade 中の bundle id (直近の値)。復帰ログにも同じ形の detail を出すため保持する。
+    private var lastTitleBundleId = ""
+
     public init(settingsStore: any SettingsStore, snapshotPath: String? = nil) {
         self.settingsStore = settingsStore
         let path = snapshotPath ?? Self.defaultSnapshotPath()
@@ -135,6 +141,7 @@ public actor MacAmbientContextService {
         started = true
 
         AppDiagnosticLog.shared.configure(settingsPath: settingsStore.settingsPath)
+        recordAccessibilityTrust(reason: "startup")
         // NWPathMonitor の最初のパスは非同期に届く。待たずに capture すると起動直後が
         // 必ず offline になり、次の capture で嘘の network_connectivity_changed
         // (offline → online) が出てしまう。上限付きで最初のパスを待つ。
@@ -194,6 +201,63 @@ public actor MacAmbientContextService {
             ])
     }
 
+    /// AX タイトル取得の degrade / 復帰を診断ログに残す。
+    ///
+    /// 60 秒ごとの capture で同じ行を積まないよう、**理由が変化したときだけ** 1 行出す。
+    /// タイトル収集が OFF のときは AX を呼んでいない (理由は常に空) ので何も出さず、
+    /// 前回値だけ捨てて次に ON になったときに改めて degrade を記録できるようにする。
+    private func recordTitleCaptureHealth(
+        _ result: ForegroundAppCollector.CollectResult,
+        titleCaptureEnabled: Bool
+    ) {
+        guard titleCaptureEnabled else {
+            lastTitleReason = ""
+            lastTitleBundleId = ""
+            return
+        }
+
+        let reason = result.titleReason
+        let bundleId = result.bundleId.isEmpty ? lastTitleBundleId : result.bundleId
+        defer {
+            lastTitleReason = reason
+            lastTitleBundleId = bundleId
+        }
+        guard reason != lastTitleReason else { return }
+
+        if reason.isEmpty {
+            AppDiagnosticLog.shared.log(
+                category: "foreground",
+                event: "title_restored",
+                detail: [
+                    "previousReason": .string(lastTitleReason),
+                    "bundleId": .string(bundleId),
+                    "trusted": .bool(result.accessibilityTrusted)
+                ])
+        } else {
+            AppDiagnosticLog.shared.log(
+                category: "foreground",
+                event: "title_degraded",
+                detail: [
+                    "reason": .string(reason),
+                    "bundleId": .string(bundleId),
+                    "trusted": .bool(result.accessibilityTrusted)
+                ])
+        }
+    }
+
+    /// アクセシビリティ許可の現在値を診断ログに残す (起動時と設定保存後)。
+    /// 「許可したのにタイトルが空」の切り分けを、ユーザに手順を尋ねずに行うための手掛かり。
+    private func recordAccessibilityTrust(reason: String) {
+        AppDiagnosticLog.shared.log(
+            category: "foreground",
+            event: "accessibility_trust",
+            detail: [
+                "trusted": .bool(ForegroundAppCollector.isAccessibilityTrusted()),
+                "reason": .string(reason),
+                "titleCaptureEnabled": .bool(titleCaptureEnabled)
+            ])
+    }
+
     /// 設定保存後に呼ぶ。ポリシーと収集可否フラグを読み直して 1 回 capture する。
     public func reloadTransmissionPolicy() async {
         let policy = AmbientTransmissionPolicy.load(
@@ -204,6 +268,7 @@ public actor MacAmbientContextService {
             policy: policy, privacyClassifications: privacyClassifications)
         mediaCaptureEnabled = CaptureFeatureFlags.isMediaCaptureEnabled(
             policy: policy, privacyClassifications: privacyClassifications)
+        recordAccessibilityTrust(reason: "transmission_policy_reloaded")
 
         guard started else { return }
         await captureAndStore(reason: "transmission_policy_reloaded")
@@ -309,10 +374,21 @@ public actor MacAmbientContextService {
         let titleEnabled = titleCaptureEnabled
         // MainActor へのホップにも締切を掛ける。同意ダイアログや応答しないアプリで
         // メインの run loop が止まっても、capture (と get_states) は先へ進む。
-        let foreground = await boundedOnMainActor(collector: "foreground_app", fallback: lastForegroundApp) {
-            ForegroundAppCollector().collect(titleCaptureEnabled: titleEnabled)
+        // 締切超過時のフォールバックは「直近の値 + 直近の理由」にする
+        // (理由が変わっていないことになるので degrade ログは出ない = collector_timed_out と二重にならない)。
+        let foregroundFallback = ForegroundAppCollector.CollectResult(
+            context: lastForegroundApp,
+            bundleId: lastTitleBundleId,
+            titleReason: lastTitleReason,
+            accessibilityTrusted: false)
+        let foregroundResult = await boundedOnMainActor(
+            collector: "foreground_app", fallback: foregroundFallback
+        ) {
+            ForegroundAppCollector().collectDetailed(titleCaptureEnabled: titleEnabled)
         }
+        let foreground = foregroundResult.context
         lastForegroundApp = foreground
+        recordTitleCaptureHealth(foregroundResult, titleCaptureEnabled: titleEnabled)
 
         let battery = batteryCollector.collect()
         let network = networkCollector.collect()

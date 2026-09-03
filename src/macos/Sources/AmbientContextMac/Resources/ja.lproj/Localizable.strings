@@ -110,7 +110,7 @@
 
 /* ----- macOS 専用: 権限とログイン項目 ----- */
 "MacPermissionAccessibilityTitle" = "アクセシビリティ権限が必要です";
-"MacPermissionAccessibilityMessage" = "ウィンドウタイトルの送信が有効になっていますが、Ambient Context MCP にアクセシビリティの許可がありません。システム設定 → プライバシーとセキュリティ → アクセシビリティ で許可するまで、タイトルは空のままになります。";
+"MacPermissionAccessibilityMessage" = "ウィンドウタイトルの送信が有効になっていますが、Ambient Context MCP にアクセシビリティの許可がありません。システム設定 → プライバシーとセキュリティ → アクセシビリティ で許可するまで、タイトルは空のままになります。\n\n許可した後、反映には Ambient Context MCP の終了と再起動が必要な場合があります。\n\n許可した後にアプリを更新 / 置き換えた場合は、macOS が古い項目を残します。アクセシビリティの一覧から「Ambient Context MCP」を削除し、追加し直してください。";
 "MacPermissionAutomationTitle" = "オートメーション権限が必要です";
 "MacPermissionAutomationMessage" = "メディアの送信が有効になりました。Music または Spotify が起動している状態での次回の取得時に、macOS が「Ambient Context MCP に操作を許可しますか」と尋ねます。拒否した場合はメディア情報が空になります。あとから システム設定 → プライバシーとセキュリティ → オートメーション で変更できます。";
 "MacPermissionOpenSettings" = "システム設定を開く";

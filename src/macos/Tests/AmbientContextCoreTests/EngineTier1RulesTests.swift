@@ -76,13 +76,27 @@ struct EngineTier1RulesTests {
     @Test("ClassifyApp_macOS_uses_bundle_ids")
     func classifyAppMacOS() {
         let table = AppClassificationTable.macOS
-        #expect(table.count == 46)
+        #expect(table.count == 49)
 
         #expect(AmbientTier1Rules.classifyApp("com.microsoft.VSCode", table: table).category == "editor")
         // bundle id の大小揺れ (com.apple.calculator のような実測ケース) に耐える。
         #expect(AmbientTier1Rules.classifyApp("COM.APPLE.SAFARI", table: table).appName == "Safari")
         #expect(AmbientTier1Rules.classifyApp("com.apple.finder", table: table).category == "shell")
         #expect(AmbientTier1Rules.classifyApp("com.googlecode.iterm2", table: table).category == "terminal")
+
+        let ghostty = AmbientTier1Rules.classifyApp("com.mitchellh.ghostty", table: table)
+        #expect(ghostty.category == "terminal")
+        #expect(ghostty.appName == "Ghostty")
+
+        let claude = AmbientTier1Rules.classifyApp("com.anthropic.claudefordesktop", table: table)
+        #expect(claude.category == "communication")
+        #expect(claude.appName == "Claude")
+
+        // ChatGPT for macOS の bundle id は com.openai.codex (実機の
+        // /Applications/ChatGPT.app/Contents/Info.plist で確認)。
+        let chatgpt = AmbientTier1Rules.classifyApp("com.openai.codex", table: table)
+        #expect(chatgpt.category == "communication")
+        #expect(chatgpt.appName == "ChatGPT")
 
         // 未知の bundle id は呼び出し側が渡す実行ファイル名にフォールバックする
         // (localizedName は OS 言語で変わるため使わない)。
