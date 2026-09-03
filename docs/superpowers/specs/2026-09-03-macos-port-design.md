@@ -1,7 +1,7 @@
 # macOS ネイティブ移植 設計・実装計画
 
 - 作成日: 2026-09-03
-- ステータス: Phase 0 (PoC) 完了、Phase 1 未着手。PoC の生データは `src/macos/poc/0N-*/RESULT.md`
+- ステータス: Phase 0〜5 実装完了 (2026-09-03)、Phase 6 (同等性検証・後回し項目) 進行中。PoC の生データは `docs/superpowers/poc-results/`
 - 対象範囲: `src/macos/` に macOS ネイティブ (Swift / AppKit / SwiftUI) のメニューバー常駐アプリを新設し、Windows 版 (`src/windows/`) と可能な限り同等の機能・MCP 契約を提供する
 
 ## 1. 現行 Windows 版の構造 (調査結果)
@@ -106,7 +106,7 @@ Hub (`LocalContextHub`) は Windows 版同様ロック (Swift では actor ま�
 |---|---|---|---|
 | アイドル秒数 (presence) | `GetLastInputInfo` | `CGEventSource.secondsSinceLastEventType(.combinedSessionState, kCGAnyInputEventType)` | 権限不要。HID 入力ベースで同等 |
 | ロック / アンロック | `WTSRegisterSessionNotification` | `DistributedNotificationCenter` の `com.apple.screenIsLocked` / `com.apple.screenIsUnlocked` | 非公式だが長年安定。`session_logon` / `logoff` は `NSWorkspace.sessionDidBecomeActive` / `sessionDidResignActive` (ファストユーザスイッチ) に対応付け |
-| フォアグラウンドアプリ | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` + `GetForegroundWindow` | `NSWorkspace.didActivateApplicationNotification` + `frontmostApplication` (bundle id, localizedName, pid) | アプリ分類は bundle id キー (例 `com.microsoft.VSCode` → editor)。`processName` と `appName` のフォールバックは実行ファイル名 (`localizedName` は OS 言語で「テキストエディット」等になるため使わない)。bundle id は大文字小文字が揺れる (`com.apple.calculator`) ので大文字小文字無視で比較。約 46 件の対応表案は `src/macos/poc/02-ax-title/RESULT.md` §7 |
+| フォアグラウンドアプリ | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` + `GetForegroundWindow` | `NSWorkspace.didActivateApplicationNotification` + `frontmostApplication` (bundle id, localizedName, pid) | アプリ分類は bundle id キー (例 `com.microsoft.VSCode` → editor)。`processName` と `appName` のフォールバックは実行ファイル名 (`localizedName` は OS 言語で「テキストエディット」等になるため使わない)。bundle id は大文字小文字が揺れる (`com.apple.calculator`) ので大文字小文字無視で比較。約 46 件の対応表案は `docs/superpowers/poc-results/2026-09-03-macos-02-ax-title.md` §7 |
 | ウィンドウタイトル (`rawWindowTitle` / `titleSummary`) | `GetWindowText` | Accessibility API (`AXUIElementCreateApplication` → `kAXFocusedWindowAttribute` → `kAXTitleAttribute`) | **アクセシビリティ権限が必要**。未許可なら `hasWindowTitle=false` + 理由文字列で degrade (PoC 2 で確認)。権限要求は該当 opt-in を ON にした時だけ行う。`AXIsProcessTrustedWithOptions(prompt)` は非ブロッキングで即 false を返すため、許可後は状態をポーリングして degrade を解除する。`AXUIElementSetMessagingTimeout(el, 1.0)` を必ず設定し、応答しないアプリで capture を止めない。`SummarizeWindowTitle` のターミナル判定 (powershell/cmd/wsl) は OS 別辞書に分け、mac は zsh/bash/fish/ssh を持つ |
 | バッテリ | `GetSystemPowerStatus` | IOKit `IOPSCopyPowerSourcesInfo` / `IOPSGetProvidingPowerSourceType`、変化は `IOPSNotificationCreateRunLoopSource` | `batterySaver` は `ProcessInfo.isLowPowerModeEnabled` |
 | 電源設定通知 (`power.lastKnownSettings.*`) | `RegisterPowerSettingNotification` 8 GUID | 下表のとおり個別に対応 | 同じ setting 名を維持して `power_setting_changed` の payload 互換を保つ |
@@ -179,12 +179,12 @@ PoC 1 (`src/macos/poc/01-mcp-http/`) をそのまま Phase 2 の土台にする�
 
 | # | 項目 | 結果 | 詳細 |
 |---|---|---|---|
-| 1 | stateless Streamable HTTP | **成功**。curl と `claude --mcp-config` で疎通。Hummingbird 不要 | `src/macos/poc/01-mcp-http/RESULT.md` |
-| 2 | 最前面アプリ / AX タイトル / アイドル秒数 | 権限不要部分は成功。AX は degrade 経路のみ確認 (裸バイナリには権限を付与できない) | `src/macos/poc/02-ax-title/RESULT.md` |
-| 3 | Music / Spotify の Apple Events | **成功**。権限プロンプトは未検証 | `src/macos/poc/03-media/RESULT.md` |
-| 4 | SwiftPM のみの .app + NSStatusItem + SMAppService + .lproj | **成功**。Universal は lipo 方式 | `src/macos/poc/04-app-bundle/RESULT.md` |
+| 1 | stateless Streamable HTTP | **成功**。curl と `claude --mcp-config` で疎通。Hummingbird 不要 | `docs/superpowers/poc-results/2026-09-03-macos-01-mcp-http.md` |
+| 2 | 最前面アプリ / AX タイトル / アイドル秒数 | 権限不要部分は成功。AX は degrade 経路のみ確認 (裸バイナリには権限を付与できない) | `docs/superpowers/poc-results/2026-09-03-macos-02-ax-title.md` |
+| 3 | Music / Spotify の Apple Events | **成功**。権限プロンプトは未検証 | `docs/superpowers/poc-results/2026-09-03-macos-03-media.md` |
+| 4 | SwiftPM のみの .app + NSStatusItem + SMAppService + .lproj | **成功**。Universal は lipo 方式 | `docs/superpowers/poc-results/2026-09-03-macos-04-app-bundle.md` |
 
-Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可後のタイトル取得、オートメーション権限の初回プロンプトと拒否時挙動。PoC 1 と PoC 4 のコードは Phase 2 / Phase 4 の土台として本体に移し、`src/macos/poc/` は Phase 4 完了時に削除する。
+Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可後のタイトル取得、オートメーション権限の初回プロンプトと拒否時挙動。PoC 1 と PoC 4 のコードは Phase 2 / Phase 4 の土台として本体に移し、`src/macos/poc/` は Phase 4 完了時に削除した (RESULT.md は `docs/superpowers/poc-results/` へ移動)。
 
 ### Phase 1: Core 移植 + 契約テスト
 
@@ -241,6 +241,27 @@ Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可�
 - Collector 実装順: Presence → Battery/Power → Network → SystemLoad → Displays → ForegroundApp (AX 含む) → Media (§3.4 の実装ルールに従う)
 - `MacAmbientContextService` actor で 60 秒 capture、通知トリガ capture、`ambient-context.json` スナップショット書き出し、Hub への `Ingest`、`SnapshotUpdated` 相当 (pause 中は Ingest しない)
 - スナップショットの `source` は `"macos-desktop"`
+
+#### Phase 3b 結果 (2026-09-03 完了)
+
+- `AmbientContextMac/Collectors` 11 ファイル + `Service` 4 ファイル。`MacAmbientContextService` は actor、OS 通知はメインスレッドの `ServiceEventBridge` で受けて Sendable 値に分解して転送
+- 実機 95 秒プローブで presence / battery / power / display / foreground_changed / foreground_title_changed / session_locked / system_suspend / system_under_load を確認。capture は 2000 ms 未満
+- 決定: `lid_switch_state` は Windows と同じ「on = 開いている」に合わせ `AppleClamshellState` を反転。クラムシェルが無い機種はキー自体を省略し期待件数を 7 にする
+- 逸脱: macOS には設定ごとの push 通知が無いため、`PowerSettingsMonitor` は「何か変わった」通知で capture を要求し、サービスが `lastKnownSettings` と diff してから `recordPowerSetting` を呼ぶ (diff しないと毎 capture で `power_setting_changed` が出る)
+- タイトル / メディア取得は `CaptureFeatureFlags` が `AmbientTransmissionPolicy.filterStates/filterEvents` に探針値を通して opt-in 状態を導出する (Core 変更なし)。opt-in が無い限り AX / Apple Events を一切呼ばない
+
+#### Phase 4 結果 (2026-09-03 完了)
+
+- `App` / `StatusBar` / `Settings` / `Autostart` / `Permissions` + `Localizable.strings` (ja/en 各 98 キー = C# の 89 + 権限案内などの追加分)
+- ad-hoc 署名の `.app` から起動し、`mcp-api.json` 生成 → `tools/list` 4 件 → `get_states` 18 項目 → 終了で `mcp-api.json` 削除、診断ログに `notify_icon_visible` (ja メニュー 8 項目) / `shutdown_end` を確認
+- `NSStatusItem` は AX の `name` が空 (`missing value`) で `help` 属性にのみ名前が出る
+
+#### Phase 5 結果 (2026-09-03 完了)
+
+- 5a: `ambient-mcp-stdio` (Foundation のみ)。`.app` は `open -g -a` で起動するため子プロセスにならず、早期終了の検知は bare 実行ファイル (開発用) の場合のみ。SSE はストリーミングではなく全文受信後に先頭 data を抽出 (stateless 応答は常に JSON なので実害なし)
+- 5b: `scripts/build-app.sh` / `package-release.sh` / `assemble-mcpb.sh`、MCPB は `server.mcp_config.platform_overrides.darwin` (仕様 0.2 の正しい位置。`entry_point` は per-platform 不可で win32 のまま)、`release.yml` は prepare → build-windows / build-macos → package (macos-latest で `.mcpb` を束ねる。`upload-artifact` は実行ビットとシンボリックリンクを落とすため mac 側は tar で受け渡し) → publish-registry、`ci.yml` 新設
+- `mcpb validate` はローカルに Node が無く未実行。初回 CI が実検証になる
+- x86_64 スライスは `lipo` での存在確認のみ (Intel 実機なし)
 
 ### Phase 4: アプリシェル
 
