@@ -25,6 +25,35 @@ public enum AmbientMcpServer {
             ]))
     }
 
+    /// HTTP リクエスト 1 件分の `transport` + `Server` の組。
+    ///
+    /// `StatelessHTTPServerTransport` は in-flight の応答を **クライアントが決めた JSON-RPC id**
+    /// で引くため (`responseWaiters[requestID]`)、1 個の transport を共有すると別クライアントが
+    /// 同じ id (例: 1) を同時に使ったときに continuation が上書きされ、先行リクエストが
+    /// 永久にハングする。SDK を触らずに直す最短の方法として、リクエストごとに組を作って捨てる。
+    /// ローカル常駐サーバのトラフィック量ではコストは無視できる (actor 1 個 + Task 1 本)。
+    public struct RequestPipeline: Sendable {
+        public let transport: StatelessHTTPServerTransport
+        private let server: Server
+
+        init(transport: StatelessHTTPServerTransport, server: Server) {
+            self.transport = transport
+            self.server = server
+        }
+
+        /// リクエスト処理後に必ず呼ぶ。受信ループの Task を止め、待機中の継続を解放する。
+        public func shutdown() async {
+            await server.stop()
+        }
+    }
+
+    /// リクエスト 1 件を処理するための組を作る。
+    public static func makePipeline(hub: LocalContextHub) async throws -> RequestPipeline {
+        let transport = makeTransport()
+        let server = try await makeAndStart(transport: transport, hub: hub)
+        return RequestPipeline(transport: transport, server: server)
+    }
+
     /// `Server` を作り、transport に接続し、ハンドラを登録して返す。
     ///
     /// `Server.start(transport:)` は **その中で** 既定ハンドラを (再) 登録するため、

@@ -76,6 +76,14 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - 読み込み (C# コンストラクタの Load* 群)
 
+    /// ウィンドウ再表示時に保存済みの値へ戻す。C# は `Closed` でウィンドウごと作り直すため
+    /// 未保存の編集は残らない。こちらはインスタンスを使い回すので明示的に読み直す。
+    func reload() {
+        load()
+        statusMessage = ""
+        autostartMessage = ""
+    }
+
     private func load() {
         groups = AmbientContextCatalog.getTransmissionUiGroups(language: catalogLanguage)
             .map { group in
@@ -199,13 +207,20 @@ final class SettingsViewModel: ObservableObject {
             try step("save_transmission") { self.saveTransmissionSettings() }
             try step("save_local_context") { self.saveLocalContextSettings() }
             try step("save_ui") { self.saveUiSettings() }
-            try step("apply_autostart") { self.applyAutostart() }
+            let autostart = try step("apply_autostart") { self.applyAutostart() }
             try await asyncStep("reload_collector") { await self.service.reloadTransmissionPolicy() }
             try step("reload_hub") { self.hub.reloadSettings() }
             try step("reload_mcp") { self.mcpHost.reloadSettings() }
 
             let languageChanged = languageSetting.caseInsensitiveCompare(initialLanguage) != .orderedSame
-            statusMessage = languageChanged ? Strings.statusSavedNeedsRestart : Strings.statusSaved
+            let saved = languageChanged ? Strings.statusSavedNeedsRestart : Strings.statusSaved
+            // C# では autostart の失敗が例外になり保存全体が「失敗」と表示される。
+            // macOS の SMAppService は開発ビルドなどで日常的に失敗しうるので、他セクションの
+            // 保存は活かしつつ、失敗はメインのステータス行にも出す (「保存しました」で
+            // 済ませると autoStart だけ効いていないことがユーザに伝わらない)。
+            statusMessage = autostart.isFailure
+                ? Strings.statusSavedWithAutostartFailure(saved, autostart.message)
+                : saved
             refreshMcpStatus()
 
             AppDiagnosticLog.shared.log(
@@ -231,9 +246,10 @@ final class SettingsViewModel: ObservableObject {
     }
 
     /// C# `SaveStep`: 失敗したステップ名を残してから再送出する。
-    private func step(_ name: String, _ action: () throws -> Void) throws {
+    @discardableResult
+    private func step<T>(_ name: String, _ action: () throws -> T) throws -> T {
         do {
-            try action()
+            return try action()
         } catch {
             AppDiagnosticLog.shared.logError(
                 category: "settings", event: "step_failed", error: error,
@@ -293,15 +309,27 @@ final class SettingsViewModel: ObservableObject {
         // AppleLanguages の書き込みは AppDelegate が起動時に行う。
     }
 
-    private func applyAutostart() {
-        autostartMessage = LoginItemManager.apply(enabled: autoStart) ?? ""
-        // 失敗した場合はチェックを実際の状態へ戻し、UI が嘘をつかないようにする。
-        autoStart = LoginItemManager.isEnabled
+    /// ログイン項目を適用する。
+    ///
+    /// **成功時にチェックボックスを `SMAppService.status` から読み直さない。**
+    /// register() / unregister() 直後の status は反映が遅れることがあり、読み直すと
+    /// ユーザの操作が目の前で巻き戻って見える。実状態へ戻すのは失敗したときだけ。
+    /// `requiresApproval` は「登録済み・承認待ち」なので ON のまま注記を出す。
+    @discardableResult
+    private func applyAutostart() -> LoginItemManager.ApplyOutcome {
+        let outcome = LoginItemManager.apply(enabled: autoStart)
+        autostartMessage = outcome.message
+        if outcome.isFailure {
+            autoStart = LoginItemManager.isEnabled
+        }
+        return outcome
     }
 
     /// C# `ParsePort`: 1..65535 以外は現在値を維持する。
+    /// C# の `int.TryParse` は前後の空白 (改行を含む) を無視するので、
+    /// トリムも `.whitespacesAndNewlines` で揃える。
     static func parsePort(_ text: String, fallback: Int) -> Int {
-        guard let port = Int(text.trimmingCharacters(in: .whitespaces)),
+        guard let port = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)),
               port > 0, port < 65536 else {
             return fallback
         }

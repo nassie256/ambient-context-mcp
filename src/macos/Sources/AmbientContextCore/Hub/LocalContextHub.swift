@@ -25,7 +25,14 @@ public final class LocalContextHub: @unchecked Sendable {
     private var latestStates: [AmbientState] = []
     private var privacyClassifications: [PrivacyClassification] = []
     private var transmissionPolicy = AmbientTransmissionPolicySnapshot()
-    private var latestObservedAt = Date(timeIntervalSince1970: 0)
+    /// C# の `_latestObservedAt` は `default(DateTimeOffset)` = 0001-01-01T00:00:00Z で始まる。
+    /// Swift の `Date.distantPast` が同じ瞬間なのでそれを使う (Unix epoch だと ingest 前の
+    /// observedAt が「1970 年」に見えて Windows と食い違う)。
+    ///
+    /// 書式化の既知の癖は `HubDefaultObservedAtTests` を参照 (年 1 のオフセットは LMT になり、
+    /// UTC より西のゾーンでは era が落ちて 0001-12-31 として書き出される)。いずれも
+    /// 「0001 年 = まだ観測していない」という読み方は保たれる。
+    private var latestObservedAt = Date.distantPast
     private var observedStateCount = 0
     private var outboundStateCount = 0
     private var internalEventHistoryCount = 0

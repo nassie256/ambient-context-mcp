@@ -110,8 +110,11 @@ struct McpServerHostTests {
         let first = try await TestServer()
         defer { Task { await first.shutdown() } }
 
-        let transport = AmbientMcpServer.makeTransport()
-        let second = McpHttpServer(transport: transport, tokenProvider: { "x" })
+        let store = FakeSettingsStore(settingsPath: TempDirectory().file("settings.json"))
+        let hub = LocalContextHub(settingsStore: store, language: "en")
+        let second = McpHttpServer(
+            pipelineFactory: { try await AmbientMcpServer.makePipeline(hub: hub) },
+            tokenProvider: { "x" })
         await #expect(throws: McpHttpServer.StartError.self) {
             try await second.start(host: "127.0.0.1", port: first.port)
         }

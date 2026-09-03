@@ -84,6 +84,12 @@ enum Strings {
     static func statusSaveFailed(_ type: String, _ message: String) -> String {
         format("StatusSaveFailedFormat", type, message)
     }
+    /// 保存自体は成功したが、ログイン項目の適用だけ失敗したときのメインステータス行。
+    /// (C# は autostart の失敗が例外になり保存全体が失敗表示になる。macOS 版は他の
+    /// セクションの保存を活かしたうえで、失敗をここに出す)
+    static func statusSavedWithAutostartFailure(_ saved: String, _ reason: String) -> String {
+        format("MacStatusSavedAutostartFailedFormat", saved, reason)
+    }
     static func statusMcpRunning(port: Int) -> String {
         format("StatusMcpRunningFormat", String(port))
     }

@@ -70,11 +70,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ) async {
         let port = mcpHost.settings.port
         do {
-            let transport = AmbientMcpServer.makeTransport()
-            _ = try await AmbientMcpServer.makeAndStart(transport: transport, hub: hub)
-
+            // transport + Server はリクエストごとに作る (JSON-RPC id 衝突の回避。
+            // AmbientMcpServer.RequestPipeline のコメント参照)。
             let server = McpHttpServer(
-                transport: transport,
+                pipelineFactory: { try await AmbientMcpServer.makePipeline(hub: hub) },
                 tokenProvider: { [mcpHost] in mcpHost.token })
             try await server.start(host: "127.0.0.1", port: port)
             httpServer = server

@@ -102,12 +102,10 @@ actor TestServer {
             .appendingPathComponent("ambient-context-mcp-server-test/\(UUID().uuidString)")
         let store = FakeSettingsStore(
             settingsPath: (directory as NSString).appendingPathComponent("settings.json"))
-        let transport = AmbientMcpServer.makeTransport()
-        _ = try await AmbientMcpServer.makeAndStart(
-            transport: transport,
-            hub: hub ?? LocalContextHub(settingsStore: store, language: "en"))
-
-        let server = McpHttpServer(transport: transport, tokenProvider: { token })
+        let sharedHub = hub ?? LocalContextHub(settingsStore: store, language: "en")
+        let server = McpHttpServer(
+            pipelineFactory: { try await AmbientMcpServer.makePipeline(hub: sharedHub) },
+            tokenProvider: { token })
         // port 0 = カーネルに空きポートを選ばせる。
         try await server.start(host: "127.0.0.1", port: 0)
         self.httpServer = server

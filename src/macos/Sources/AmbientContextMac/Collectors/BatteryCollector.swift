@@ -43,8 +43,10 @@ public struct BatteryCollector: Sendable {
             return reading
         }
 
+        // `IOPSGetProvidingPowerSourceType` は Get 規則 (呼び出し側は所有権を持たない) なので
+        // takeUnretainedValue。takeRetainedValue にすると over-release になる。
         reading.providingPowerSourceType =
-            IOPSGetProvidingPowerSourceType(blob)?.takeRetainedValue() as String? ?? ""
+            IOPSGetProvidingPowerSourceType(blob)?.takeUnretainedValue() as String? ?? ""
         if !reading.providingPowerSourceType.isEmpty {
             reading.onAcPower = reading.providingPowerSourceType == kIOPMACPowerKey
         }

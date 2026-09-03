@@ -18,6 +18,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let service: MacAmbientContextService
     private let catalogLanguage: String
 
+    /// `setFrameAutosaveName` / `setFrameUsingName` に使う名前 (UserDefaults のキーになる)。
+    static let frameAutosaveName = "SettingsWindow"
+
     private var window: NSWindow?
     private var model: SettingsViewModel?
 
@@ -37,9 +40,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     /// C# `App.OpenSettings`。既に開いていれば前面に出すだけ。
+    ///
+    /// C# は `Closed` でウィンドウを捨てて毎回作り直すので、閉じた時点で未保存の編集は消える。
+    /// macOS 版はウィンドウとモデルを使い回す (位置を保つため) ので、代わりに再表示のたびに
+    /// `reload()` して保存済みの値へ戻す。これをしないと「変更 → 閉じる → 開き直す」で
+    /// 保存していない編集が残り、Windows と挙動が食い違う。
     func show() {
         AppDiagnosticLog.shared.log(category: "tray", event: "open_settings_requested")
         if let window {
+            model?.reload()
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -62,7 +71,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.delegate = self
         window.contentMinSize = NSSize(width: 480, height: 480)
         window.setContentSize(NSSize(width: 720, height: 760))
-        window.setFrameAutosaveName("SettingsWindow")
+        // setFrameAutosaveName は「以後の変更を保存する」だけ。素の NSWindow には
+        // NSWindowController のような自動復元が無いので、保存済みフレームは自分で読む。
+        window.setFrameAutosaveName(Self.frameAutosaveName)
+        window.setFrameUsingName(Self.frameAutosaveName)
         model.hostWindow = window
 
         self.window = window
@@ -97,5 +109,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         AppDiagnosticLog.shared.log(category: "settings", event: "window_closing")
         // .accessory なのでウィンドウを閉じてもアプリは常駐し続ける。
         // インスタンスは保持し、次回 show() で同じウィンドウ (と位置) を再表示する。
+        // 未保存の編集は次の show() の reload() で捨てる (C# の作り直しと同じ結果)。
     }
 }

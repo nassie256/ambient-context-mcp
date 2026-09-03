@@ -43,8 +43,10 @@ public actor MacAmbientContextService {
 
     private var eventBridge: ServiceEventBridge?
     private var snapshotUpdatedHandler: (@Sendable (AmbientContextSnapshot) -> Void)?
+    /// 収集中かどうか。`stop()` は終端ではないので「一度止めたら二度と動かない」フラグは持たない
+    /// (`NetworkCollector` / `PowerSettingsMonitor` / `CaptureScheduler` はいずれも
+    /// start で資源を作り直すので、start → stop → start が成立する)。
     private var started = false
-    private var stopped = false
 
     /// C# の `_captureGate` (SemaphoreSlim(1,1)) 相当。actor は await をまたぐと再入するため、
     /// capture の開始順 = 完了順 = `latestSnapshot` 反映順を明示的に保証する。
@@ -109,12 +111,16 @@ public actor MacAmbientContextService {
 
     // MARK: - ライフサイクル
 
+    /// 収集を開始する。`stop()` の後に呼び直しても再開できる (各モニタは start で作り直す)。
     public func start() async {
-        guard !started, !stopped else { return }
+        guard !started else { return }
         started = true
 
         AppDiagnosticLog.shared.configure(settingsPath: settingsStore.settingsPath)
-        networkCollector.start()
+        // NWPathMonitor の最初のパスは非同期に届く。待たずに capture すると起動直後が
+        // 必ず offline になり、次の capture で嘘の network_connectivity_changed
+        // (offline → online) が出てしまう。上限付きで最初のパスを待つ。
+        await networkCollector.startAndWaitForFirstPath()
 
         let bridge = await ServiceEventBridge(service: self)
         eventBridge = bridge
@@ -133,9 +139,9 @@ public actor MacAmbientContextService {
         await captureAndStore(reason: "startup")
     }
 
+    /// 収集を止める。終端ではない: `start()` を呼べば再開できる。
     public func stop() async {
-        guard started, !stopped else { return }
-        stopped = true
+        guard started else { return }
         started = false
 
         scheduler.stop()

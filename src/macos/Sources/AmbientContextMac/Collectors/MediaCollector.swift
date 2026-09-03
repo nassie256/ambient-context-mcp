@@ -11,7 +11,8 @@ import AmbientContextCore
 /// 実装上の必須ルール (PoC 3 RESULT.md §7):
 /// 1. `NSRunningApplication.runningApplications(withBundleIdentifier:)` で起動中のプレイヤー
 ///    だけに問い合わせる (未起動アプリに `tell application` すると**起動してしまう**)
-/// 2. 1500 ms のタイムアウトガード (Windows 版と同値)。超過時はスレッドを放棄する
+/// 2. 1500 ms のタイムアウトガード (Windows 版と同値)。超過時は常駐ワーカーに実行を
+///    任せたまま呼び出し側だけ諦める (プレイヤーごとの in-flight ガードで重複要求は skip)
 /// 3. `duration` は Music が秒、Spotify がミリ秒。`player position` は両方秒
 /// 4. AppleScript の変数名は 3 文字以上の非衝突名 (2 文字だと -2741 でコンパイル失敗)
 /// 5. -1728 (トラック無し) / -1743 (権限拒否) を個別に reason へ写像する
@@ -64,7 +65,7 @@ public struct MediaCollector: Sendable {
     /// opt-in していないユーザに出さないため)。呼び出し側 = `MacAmbientContextService`。
     ///
     /// 呼び出し元の actor / MainActor をブロックしないよう、AppleScript は必ず
-    /// 専用スレッドで実行し `withCheckedContinuation` で待つ。
+    /// 常駐の直列ワーカースレッドで実行し `withCheckedContinuation` で待つ。
     public func collect() async -> MediaContext {
         let running = await MainActor.run { Self.runningCandidates(self.candidates) }
         guard !running.isEmpty else {
@@ -170,45 +171,61 @@ public struct MediaCollector: Sendable {
         var errorMessage: String?
     }
 
-    /// AppleScript を専用スレッドで実行し、`timeout` を超えたらスレッドを放棄して nil を返す。
+    /// AppleScript を **常駐の直列ワーカー** で実行し、`timeout` を超えたら nil を返す。
+    ///
+    /// 以前はプローブごとに `Thread` を作り、タイムアウト時にそれを放棄していた。
+    /// プレイヤーが刺さっていると 60 秒ごとにスレッドが 1 本ずつ増え続け、しかも
+    /// `NSAppleScript` の実行が重なっていた。ワーカーを 1 本に固定すれば、
+    /// 刺さった実行はそのワーカーを占有するだけで増殖せず、実行も直列になる。
     /// 呼び出し元スレッドはブロックしない (継続で再開する)。
-    static func runScript(_ source: String, timeout: TimeInterval) async -> ScriptResult? {
+    /// - Parameter onWorkerFinished: ワーカーが実際に実行を終えたときに **必ず** 呼ばれる。
+    ///   タイムアウトで呼び出し元へ nil を返した後でも、刺さったスクリプトが解けた時点で呼ばれる。
+    static func runScript(
+        _ source: String,
+        timeout: TimeInterval,
+        onWorkerFinished: @escaping @Sendable () -> Void = {}
+    ) async -> ScriptResult? {
         await withCheckedContinuation { (continuation: CheckedContinuation<ScriptResult?, Never>) in
             let resumed = ResumeOnce(continuation)
 
-            let thread = Thread {
-                var output = ScriptResult()
-                var errorInfo: NSDictionary?
-                if let apple = NSAppleScript(source: source) {
-                    let descriptor = apple.executeAndReturnError(&errorInfo)
-                    if let info = errorInfo {
-                        output.errorNumber = (info[NSAppleScript.errorNumber] as? NSNumber)?.intValue
-                        output.errorMessage = info[NSAppleScript.errorMessage] as? String
-                            ?? info[NSAppleScript.errorBriefMessage] as? String
-                            ?? "\(info)"
-                    } else if descriptor.numberOfItems >= 6 {
-                        output.state = Self.item(descriptor, 1)
-                        output.title = Self.item(descriptor, 2)
-                        output.artist = Self.item(descriptor, 3)
-                        output.album = Self.item(descriptor, 4)
-                        output.positionSeconds = Double(Self.item(descriptor, 5))
-                        output.durationRaw = Double(Self.item(descriptor, 6))
-                    } else {
-                        output.errorMessage = "unexpected AppleScript result shape"
-                    }
-                } else {
-                    output.errorMessage = "NSAppleScript could not be constructed"
-                }
+            AppleScriptWorker.shared.submit {
+                let output = Self.execute(source)
+                onWorkerFinished()
                 resumed.resume(with: output)
             }
-            thread.stackSize = 512 * 1024
-            thread.start()
 
             // タイムアウト側。先に到達した方だけが継続を再開する (ResumeOnce が保証)。
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 resumed.resume(with: nil)
             }
         }
+    }
+
+    /// ワーカースレッド上で実行される本体。`NSAppleEventDescriptor` はここで値型に落とす。
+    private static func execute(_ source: String) -> ScriptResult {
+        var output = ScriptResult()
+        var errorInfo: NSDictionary?
+        guard let apple = NSAppleScript(source: source) else {
+            output.errorMessage = "NSAppleScript could not be constructed"
+            return output
+        }
+        let descriptor = apple.executeAndReturnError(&errorInfo)
+        if let info = errorInfo {
+            output.errorNumber = (info[NSAppleScript.errorNumber] as? NSNumber)?.intValue
+            output.errorMessage = info[NSAppleScript.errorMessage] as? String
+                ?? info[NSAppleScript.errorBriefMessage] as? String
+                ?? "\(info)"
+        } else if descriptor.numberOfItems >= 6 {
+            output.state = Self.item(descriptor, 1)
+            output.title = Self.item(descriptor, 2)
+            output.artist = Self.item(descriptor, 3)
+            output.album = Self.item(descriptor, 4)
+            output.positionSeconds = Double(Self.item(descriptor, 5))
+            output.durationRaw = Double(Self.item(descriptor, 6))
+        } else {
+            output.errorMessage = "unexpected AppleScript result shape"
+        }
+        return output
     }
 
     /// 継続を高々 1 回だけ再開するためのラッパ (スレッド完了とタイムアウトの競合を吸収する)。
@@ -263,12 +280,33 @@ public struct MediaCollector: Sendable {
     }
 
     static func probe(_ candidate: PlayerCandidate) async -> MediaSessionContext {
+        // 前回のプローブがまだ終わっていない (= プレイヤーが刺さっている) なら、
+        // 問い合わせを重ねずに直前の既知の状態を返す。重ねるとワーカーのキューが
+        // 際限なく伸びて、刺さりが解けた瞬間に古いスクリプトが一斉に走る。
+        guard MediaProbeRegistry.shared.beginProbe(bundleId: candidate.bundleId) else {
+            AppDiagnosticLog.shared.log(
+                category: "media", event: "probe_skipped_in_flight",
+                detail: ["bundleId": .string(candidate.bundleId)])
+            return MediaProbeRegistry.shared.lastKnown(bundleId: candidate.bundleId)
+                ?? MediaSessionContext(
+                    sourceAppUserModelId: candidate.bundleId,
+                    error: "previous AppleScript probe still in flight")
+        }
         var session = MediaSessionContext(sourceAppUserModelId: candidate.bundleId)
 
-        guard let result = await runScript(script(for: candidate), timeout: scriptTimeout) else {
+        // in-flight フラグを落とすのは **ワーカーが実際に終わったとき**。タイムアウトで
+        // 見捨てた実行はまだワーカーを占有しているので、そこで解除してはいけない。
+        let bundleId = candidate.bundleId
+        let result = await runScript(
+            script(for: candidate),
+            timeout: scriptTimeout,
+            onWorkerFinished: { MediaProbeRegistry.shared.endProbe(bundleId: bundleId) })
+
+        guard let result else {
             session.error = "AppleScript timed out after \(Int(scriptTimeout * 1000)) ms"
             return session
         }
+        defer { MediaProbeRegistry.shared.recordResult(bundleId: bundleId, session: session) }
 
         if let number = result.errorNumber {
             session.error = errorReason(
@@ -302,5 +340,81 @@ public struct MediaCollector: Sendable {
                 : Int64((duration * 1000.0).rounded())
         }
         return session
+    }
+}
+
+/// `NSAppleScript` を実行する常駐の直列ワーカー。
+///
+/// プローブごとに `Thread` を作って捨てる実装だと、プレイヤーが刺さったときに
+/// タイムアウトのたびにスレッドが 1 本ずつ放棄され、60 秒周期で増え続けていた。
+/// さらに複数の `NSAppleScript` 実行が重なりうる。実行スレッドを 1 本に固定すれば
+/// どちらも起きない (刺さった実行はこのワーカーを占有するだけ)。
+final class AppleScriptWorker: @unchecked Sendable {
+    static let shared = AppleScriptWorker()
+
+    /// 直列キュー = 同時に走る AppleScript は常に高々 1 本。
+    private let queue = DispatchQueue(label: "ambient-context.applescript-worker", qos: .utility)
+
+    private init() {}
+
+    func submit(_ work: @escaping @Sendable () -> Void) {
+        queue.async(execute: work)
+    }
+}
+
+/// プレイヤーごとの「プローブ実行中か」と「直近に取れた結果」を持つ。
+///
+/// 実行中のプレイヤーに重ねて問い合わせると、直列ワーカーのキューが伸びるだけで
+/// 何も改善しない。重複要求はスキップし、代わりに直近の既知の状態を返す。
+final class MediaProbeRegistry: @unchecked Sendable {
+    static let shared = MediaProbeRegistry()
+
+    private let lock = NSLock()
+    private var inFlight = Set<String>()
+    private var lastResults: [String: MediaSessionContext] = [:]
+
+    init() {}
+
+    /// プローブ開始を宣言する。既に実行中なら false (呼び出し側はスキップする)。
+    func beginProbe(bundleId: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return inFlight.insert(bundleId).inserted
+    }
+
+    /// ワーカーが実行を終えたときに呼ぶ。**タイムアウト時に呼んではいけない**
+    /// (見捨てた実行はまだワーカーを占有しているため)。
+    func endProbe(bundleId: String) {
+        lock.lock()
+        inFlight.remove(bundleId)
+        lock.unlock()
+    }
+
+    /// スキップ時に返す「直近の既知の状態」を更新する。
+    func recordResult(bundleId: String, session: MediaSessionContext) {
+        lock.lock()
+        lastResults[bundleId] = session
+        lock.unlock()
+    }
+
+    func lastKnown(bundleId: String) -> MediaSessionContext? {
+        lock.lock()
+        defer { lock.unlock() }
+        return lastResults[bundleId]
+    }
+
+    /// テスト用のリセット。
+    func reset() {
+        lock.lock()
+        inFlight.removeAll()
+        lastResults.removeAll()
+        lock.unlock()
+    }
+
+    /// 実行中かどうか (テスト・診断用)。
+    func isInFlight(bundleId: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return inFlight.contains(bundleId)
     }
 }

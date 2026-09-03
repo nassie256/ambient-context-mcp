@@ -28,21 +28,27 @@ public actor McpHttpServer {
         }
     }
 
-    private let transport: StatelessHTTPServerTransport
+    /// 1 リクエストの処理に許す上限。超えたら 504 を返して接続を解放する
+    /// (SDK 側の continuation が何らかの理由で resume されなくても無限待ちにしない)。
+    public static let requestTimeoutSeconds: Double = 60
+
+    private let pipelineFactory: @Sendable () async throws -> AmbientMcpServer.RequestPipeline
     private let tokenProvider: @Sendable () -> String
 
     private var group: MultiThreadedEventLoopGroup?
     private var channel: Channel?
 
     /// - Parameters:
-    ///   - transport: `AmbientMcpServer.makeTransport()` で作った stateless transport。
+    ///   - pipelineFactory: リクエスト 1 件分の transport + Server を作るファクトリ
+    ///     (`AmbientMcpServer.makePipeline(hub:)`)。共有すると JSON-RPC id の衝突で
+    ///     リクエストがハングするため、必ずリクエストごとに新しい組を返すこと。
     ///   - tokenProvider: リクエストごとに現在のトークンを取る。設定画面での再生成に追従するため
     ///     値ではなくクロージャで受ける (`McpServerHost.reloadSettings()` 後も有効)。
     public init(
-        transport: StatelessHTTPServerTransport,
+        pipelineFactory: @escaping @Sendable () async throws -> AmbientMcpServer.RequestPipeline,
         tokenProvider: @escaping @Sendable () -> String
     ) {
-        self.transport = transport
+        self.pipelineFactory = pipelineFactory
         self.tokenProvider = tokenProvider
     }
 
@@ -99,7 +105,69 @@ public actor McpHttpServer {
             return RawHTTPResponse(
                 status: failure.status, headers: failure.headers, body: failure.body)
         }
-        return RawHTTPResponse(await transport.handleRequest(request))
+
+        let pipeline: AmbientMcpServer.RequestPipeline
+        do {
+            pipeline = try await pipelineFactory()
+        } catch {
+            return RawHTTPResponse(
+                status: 500,
+                headers: ["Content-Type": "application/json"],
+                body: Data(#"{"error":"server_unavailable"}"#.utf8))
+        }
+
+        let response = await Self.withTimeout(seconds: Self.requestTimeoutSeconds) {
+            await pipeline.transport.handleRequest(request)
+        }
+        // shutdown は必ず行う。タイムアウトで見捨てた処理も、ここで continuation が解放される。
+        await pipeline.shutdown()
+
+        guard let response else {
+            return RawHTTPResponse(
+                status: 504,
+                headers: ["Content-Type": "application/json"],
+                body: Data(#"{"error":"timeout"}"#.utf8))
+        }
+        return RawHTTPResponse(response)
+    }
+
+    /// `operation` の結果を `seconds` まで待ち、間に合わなければ nil を返す。
+    ///
+    /// TaskGroup は「子タスクが全部終わるまで戻らない」ので、キャンセルに反応しない
+    /// SDK の継続待ちには使えない。見捨てた処理は後で勝手に完了して破棄される。
+    static func withTimeout(
+        seconds: Double,
+        operation: @escaping @Sendable () async -> HTTPResponse
+    ) async -> HTTPResponse? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<HTTPResponse?, Never>) in
+            let once = ResumeOnce(continuation)
+            Task {
+                let value = await operation()
+                once.resume(with: value)
+            }
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                once.resume(with: nil)
+            }
+        }
+    }
+
+    /// 継続を高々 1 回だけ再開するラッパ (完了とタイムアウトの競合を吸収する)。
+    private final class ResumeOnce: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<HTTPResponse?, Never>?
+
+        init(_ continuation: CheckedContinuation<HTTPResponse?, Never>) {
+            self.continuation = continuation
+        }
+
+        func resume(with value: HTTPResponse?) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(returning: value)
+        }
     }
 
     /// `/mcp` / `/mcp/` / `/mcp/foo` は該当、`/mcpx` は非該当 (`PathString.StartsWithSegments` と同じ)。
@@ -156,12 +224,16 @@ private final class McpHttpHandler: ChannelInboundHandler, @unchecked Sendable {
 
             let request = Self.makeRequest(head: head, body: body)
             let version = head.version
-            // ChannelHandlerContext は EventLoop 外に持ち出せないので、書き戻しは必ず
-            // ctx.eventLoop.execute の中で行う (PoC 1 の落とし穴 4)。
-            nonisolated(unsafe) let ctx = context
+            let keepAlive = head.isKeepAlive
+            // `ChannelHandlerContext` は Sendable でなく、しかも **await をまたぐと既に
+            // ハンドラがパイプラインから外れている可能性がある** (クライアントが応答前に
+            // 切断した場合)。`Channel` は Sendable かつ切断後の write も安全に失敗するだけ
+            // なので、非同期処理をまたぐ書き戻しは必ず channel 経由で行う。
+            let channel = context.channel
             Task {
                 let response = await self.server.handle(request)
-                ctx.eventLoop.execute { self.write(response, version: version, context: ctx) }
+                Self.write(
+                    response, version: version, keepAlive: keepAlive, channel: channel)
             }
         }
     }
@@ -178,7 +250,14 @@ private final class McpHttpHandler: ChannelInboundHandler, @unchecked Sendable {
         return HTTPRequest(method: head.method.rawValue, headers: headers, body: data, path: path)
     }
 
-    private func write(_ response: RawHTTPResponse, version: HTTPVersion, context: ChannelHandlerContext) {
+    /// `Channel` 経由で応答を書き戻す。切断済みチャネルへの write は promise が
+    /// `ChannelError.ioOnClosedChannel` で失敗するだけで、クラッシュにはならない。
+    private static func write(
+        _ response: RawHTTPResponse,
+        version: HTTPVersion,
+        keepAlive: Bool,
+        channel: Channel
+    ) {
         var head = HTTPResponseHead(
             version: version, status: HTTPResponseStatus(statusCode: response.status))
         for (name, value) in response.headers {
@@ -186,12 +265,32 @@ private final class McpHttpHandler: ChannelInboundHandler, @unchecked Sendable {
         }
         // SDK の HTTPResponse には Content-Length が入っていない。付けないと keep-alive がハングする。
         head.headers.replaceOrAdd(name: "Content-Length", value: String(response.body?.count ?? 0))
-        context.write(wrapOutboundOut(.head(head)), promise: nil)
-        if let data = response.body, !data.isEmpty {
-            var buffer = context.channel.allocator.buffer(capacity: data.count)
-            buffer.writeBytes(data)
-            context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+        // `Connection: close` / HTTP/1.0 (keep-alive 明示なし) では応答後に閉じる。
+        // HTTPResponseHead.isKeepAlive はこのヘッダを見て決まるので、リクエスト側の値を写す。
+        if !keepAlive {
+            head.headers.replaceOrAdd(name: "Connection", value: "close")
+        } else if version.major == 1 && version.minor == 0 {
+            // HTTP/1.0 の既定は close なので、keep-alive は明示しないと切られる。
+            head.headers.replaceOrAdd(name: "Connection", value: "keep-alive")
         }
-        context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
+
+        let bodyPart: HTTPServerResponsePart? = response.body.flatMap { data in
+            guard !data.isEmpty else { return nil }
+            var buffer = channel.allocator.buffer(capacity: data.count)
+            buffer.writeBytes(data)
+            return .body(.byteBuffer(buffer))
+        }
+        let headPart = HTTPServerResponsePart.head(head)
+
+        channel.eventLoop.execute {
+            channel.write(headPart, promise: nil)
+            if let bodyPart {
+                channel.write(bodyPart, promise: nil)
+            }
+            let done = channel.writeAndFlush(HTTPServerResponsePart.end(nil))
+            if !keepAlive {
+                done.whenComplete { _ in channel.close(promise: nil) }
+            }
+        }
     }
 }

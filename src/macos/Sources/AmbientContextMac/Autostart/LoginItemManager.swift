@@ -32,22 +32,46 @@ enum LoginItemManager {
     }
 
     /// C# `AutostartManager.IsEnabled()` 相当。
-    /// `requiresApproval` (登録済みだがユーザがシステム設定で無効化) も「有効にしようとしている」
-    /// 状態なのでチェック ON として扱う。
+    /// `requiresApproval` は「登録済みだがユーザ承認待ち」なので **有効** 側に数える
+    /// (チェックは ON のまま、承認が要ることはステータス行の注記で伝える)。
     static var isEnabled: Bool {
         let current = status
         return current == .enabled || current == .requiresApproval
     }
 
+    /// `apply(enabled:)` の結果。
+    /// 「失敗」と「登録できたが承認待ち」を呼び出し側が区別できるようにする
+    /// (承認待ちはチェックを ON のままにしたい。失敗のときだけ実状態へ戻す)。
+    enum ApplyOutcome: Sendable, Equatable {
+        /// 要求どおりになった。
+        case applied
+        /// 登録はできたが、システム設定でユーザの承認 (有効化) が要る。
+        case pendingApproval(String)
+        /// 変更できなかった。
+        case failed(String)
+
+        /// ステータス行に出す注記 (無ければ空文字)。
+        var message: String {
+            switch self {
+            case .applied: return ""
+            case .pendingApproval(let text), .failed(let text): return text
+            }
+        }
+
+        var isFailure: Bool {
+            if case .failed = self { return true }
+            return false
+        }
+    }
+
     /// C# `Enable()` / `Disable()` 相当。
-    /// - Returns: 成功なら nil、失敗ならユーザ向けの理由文字列。
     @discardableResult
-    static func apply(enabled: Bool) -> String? {
+    static func apply(enabled: Bool) -> ApplyOutcome {
         guard isAvailable else {
             AppDiagnosticLog.shared.log(
                 category: "autostart", event: "not_bundled",
                 detail: ["requested": .bool(enabled), "bundlePath": .string(Bundle.main.bundlePath)])
-            return Strings.text("MacAutostartNotBundled")
+            return .failed(Strings.text("MacAutostartNotBundled"))
         }
 
         do {
@@ -63,9 +87,11 @@ enum LoginItemManager {
             AppDiagnosticLog.shared.log(
                 category: "autostart", event: enabled ? "enabled" : "disabled",
                 detail: ["status": .string(statusText)])
+            // register() 直後の status は反映が遅れることがある。ここでの読み出しは
+            // 「承認待ちかどうか」の注記にだけ使い、チェックボックスの値には反映しない。
             return enabled && status == .requiresApproval
-                ? Strings.text("MacAutostartRequiresApproval")
-                : nil
+                ? .pendingApproval(Strings.text("MacAutostartRequiresApproval"))
+                : .applied
         } catch {
             let nsError = error as NSError
             AppDiagnosticLog.shared.logError(
@@ -76,7 +102,8 @@ enum LoginItemManager {
                     "code": .int(nsError.code),
                     "status": .string(statusText)
                 ])
-            return Strings.format("MacAutostartUnavailableFormat", nsError.localizedDescription)
+            return .failed(
+                Strings.format("MacAutostartUnavailableFormat", nsError.localizedDescription))
         }
     }
 }

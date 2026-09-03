@@ -120,3 +120,4 @@
 "MacAutostartUnavailableFormat" = "Could not change the login item: %1$@";
 "MacAutostartNotBundled" = "Login items are only available when running the installed \"Ambient Context MCP.app\" (not a development build).";
 "MacAutostartRequiresApproval" = "The login item was registered but is turned off in System Settings → General → Login Items. Enable it there.";
+"MacStatusSavedAutostartFailedFormat" = "%1$@ (login item not applied: %2$@)";

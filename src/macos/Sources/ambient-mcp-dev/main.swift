@@ -22,10 +22,10 @@ store.saveMcpServerSettings(McpServerSettings(autoStart: false, port: port, toke
 let hub = LocalContextHub(settingsStore: store, language: "en")
 let host = McpServerHost(settingsStore: store)
 
-let transport = AmbientMcpServer.makeTransport()
-_ = try await AmbientMcpServer.makeAndStart(transport: transport, hub: hub)
-
-let httpServer = McpHttpServer(transport: transport, tokenProvider: { host.token })
+// transport + Server はリクエストごとに作る (JSON-RPC id 衝突の回避。AmbientMcpServer 参照)。
+let httpServer = McpHttpServer(
+    pipelineFactory: { try await AmbientMcpServer.makePipeline(hub: hub) },
+    tokenProvider: { host.token })
 try await httpServer.start(host: "127.0.0.1", port: port)
 try host.writeDiscoveryFile()
 

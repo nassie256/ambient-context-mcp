@@ -118,3 +118,4 @@
 "MacAutostartUnavailableFormat" = "ログイン項目を変更できませんでした: %1$@";
 "MacAutostartNotBundled" = "ログイン項目はインストール済みの「Ambient Context MCP.app」から起動した場合のみ利用できます (開発ビルドでは使えません)。";
 "MacAutostartRequiresApproval" = "ログイン項目を登録しましたが、システム設定 → 一般 → ログイン項目 で無効にされています。そちらで有効にしてください。";
+"MacStatusSavedAutostartFailedFormat" = "%1$@ (ログイン項目は適用できませんでした: %2$@)";
