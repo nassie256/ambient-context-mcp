@@ -208,7 +208,7 @@ Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可�
   | `snapshot.source` | `windows-desktop` | `macos-desktop` |
   | カタログ言語 | `CurrentUICulture` | 明示 `language:` 引数 (既定は `Locale.preferredLanguages`) |
   | `ArgumentException` | 例外 | `ContextToolsError.invalidArgument` (メッセージは同一) |
-- カタログ文言の「Windows SMTC」等はフィクスチャ一致のため**そのまま**。中立化は C# 側 PR + フィクスチャ再生成とセットで別途行う
+- カタログ文言の「Windows SMTC」等はフィクスチャ一致のため Phase 1 時点では**そのまま**。中立化は Phase 6 で C# / Swift 同時変更 + フィクスチャ再生成として実施済み
 
 ### Phase 2: MCP サーバ + 設定ストア
 

@@ -78,12 +78,12 @@ extension AmbientContextCatalog {
 
             // Session
             schema("session_locked", "medium",
-                "Windows セッションがロックされた瞬間。Payload なし。",
-                "Fires when the Windows session is locked. No payload.", l),
+                "OS セッションがロックされた瞬間。Payload なし。",
+                "Fires when the OS session is locked. No payload.", l),
 
             schema("session_unlocked", "medium",
-                "Windows セッションがアンロックされた瞬間。Payload なし。",
-                "Fires when the Windows session is unlocked. No payload.", l),
+                "OS セッションがアンロックされた瞬間。Payload なし。",
+                "Fires when the OS session is unlocked. No payload.", l),
 
             schema("session_logon", "medium",
                 "OS セッション開始時。Payload なし。",
@@ -181,10 +181,10 @@ extension AmbientContextCatalog {
                 ]),
 
             schema("power_setting_changed", "low",
-                "Windows power setting (AC/DC source, monitor power, lid switch など) の変化通知。",
-                "Notification of a Windows power setting change (AC/DC source, monitor power, lid switch, etc).", l, [
+                "OS の電源設定 (AC/DC source, monitor power, lid switch など) の変化通知。",
+                "Notification of an OS power setting change (AC/DC source, monitor power, lid switch, etc).", l, [
                     key("setting", "low", "設定名 (例: ac_dc_power_source, monitor_power_on)。", "Setting name (e.g. ac_dc_power_source, monitor_power_on).", "monitor_power_on", l),
-                    key("guid", "low", "Windows GUID 表記。", "Windows GUID.", "02731015-4510-4526-99e6-e5a17ebd1aea", l),
+                    key("guid", "low", "設定の識別子 (Windows: GUID 表記 / macOS: 設定名)。", "Setting identifier (Windows: GUID / macOS: setting name).", "02731015-4510-4526-99e6-e5a17ebd1aea", l),
                     key("value", "low", "整形済みの値 (例: \"on\" / \"off\")。", "Formatted value (e.g. \"on\" / \"off\").", "on", l),
                     key("raw_value", "low", "生の整数値。", "Raw integer value.", "1", l),
                     key("data_length", "low", "ペイロードのバイト長。", "Payload byte length.", "4", l)
@@ -218,8 +218,8 @@ extension AmbientContextCatalog {
 
             // Media
             schema("media_session_changed", "medium",
-                "Windows SMTC のメディアセッション情報 (曲・動画タイトル等) が変わった瞬間。title / artist は別 path (.title / .artist) で個別に高機微分類されており、ユーザー opt-in と context.high:read scope の両方が必要。",
-                "Fires when SMTC media session details change. title / artist are classified high under separate paths and require both user opt-in and context.high:read scope.", l, [
+                "OS のメディアセッション情報 (Windows: SMTC / macOS: Music・Spotify) の内容 (曲・動画タイトル等) が変わった瞬間。title / artist は別 path (.title / .artist) で個別に高機微分類されており、ユーザー opt-in と context.high:read scope の両方が必要。",
+                "Fires when OS media session details change (Windows: SMTC / macOS: Music, Spotify). title / artist are classified high under separate paths and require both user opt-in and context.high:read scope.", l, [
                     key("source_app", "medium", "再生元アプリの AppUserModelId (例: Spotify, Chrome タブ)。", "AppUserModelId of the source app (e.g. Spotify, a Chrome tab).", "Spotify.exe", l),
                     key("source_kind", "medium", "source_app から推定したメディア種別: \"music\" / \"video\" / \"browser\" / \"unknown\"。ブラウザはタブの中身が判定できないため別カテゴリ。ヒューリスティックなので誤分類はあり得る。", "Coarse media kind inferred from source_app: \"music\" / \"video\" / \"browser\" / \"unknown\". Browser is its own category since tab contents can't be inspected. Heuristic — misclassification is possible.", "music", l),
                     key("playback_status", "medium", "Playing / Paused / Stopped。", "Playing / Paused / Stopped.", "Playing", l),

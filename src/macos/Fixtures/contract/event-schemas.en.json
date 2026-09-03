@@ -78,13 +78,13 @@
   {
     "name": "session_locked",
     "sensitivity": "medium",
-    "description": "Fires when the Windows session is locked. No payload.",
+    "description": "Fires when the OS session is locked. No payload.",
     "payloadKeys": []
   },
   {
     "name": "session_unlocked",
     "sensitivity": "medium",
-    "description": "Fires when the Windows session is unlocked. No payload.",
+    "description": "Fires when the OS session is unlocked. No payload.",
     "payloadKeys": []
   },
   {
@@ -340,7 +340,7 @@
   {
     "name": "power_setting_changed",
     "sensitivity": "low",
-    "description": "Notification of a Windows power setting change (AC/DC source, monitor power, lid switch, etc).",
+    "description": "Notification of an OS power setting change (AC/DC source, monitor power, lid switch, etc).",
     "payloadKeys": [
       {
         "key": "setting",
@@ -351,7 +351,7 @@
       {
         "key": "guid",
         "sensitivity": "low",
-        "description": "Windows GUID.",
+        "description": "Setting identifier (Windows: GUID / macOS: setting name).",
         "example": "02731015-4510-4526-99e6-e5a17ebd1aea"
       },
       {
@@ -427,7 +427,7 @@
   {
     "name": "media_session_changed",
     "sensitivity": "medium",
-    "description": "Fires when SMTC media session details change. title / artist are classified high under separate paths and require both user opt-in and context.high:read scope.",
+    "description": "Fires when OS media session details change (Windows: SMTC / macOS: Music, Spotify). title / artist are classified high under separate paths and require both user opt-in and context.high:read scope.",
     "payloadKeys": [
       {
         "key": "source_app",

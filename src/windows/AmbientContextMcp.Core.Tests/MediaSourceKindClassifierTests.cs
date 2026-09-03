@@ -12,6 +12,9 @@ public class MediaSourceKindClassifierTests
     [InlineData("AppleInc.AppleMusicWin_nzyj5cx40ttqa!AppleMusicWin", "music")]
     [InlineData("AmazonMobileLLC.AmazonMusic_b0xbz8s9n9qvw!App", "music")]
     [InlineData("Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic", "music")]
+    // macOS bundle id (大文字小文字は無視される)
+    [InlineData("com.apple.Music", "music")]
+    [InlineData("com.apple.podcasts", "music")]
     public void Classifies_known_music_apps(string sourceApp, string expected)
     {
         Assert.Equal(expected, MediaSourceKindClassifier.Classify(sourceApp));
@@ -25,6 +28,8 @@ public class MediaSourceKindClassifierTests
     [InlineData("DisneyPlus.DisneyPlus_*", "video")]
     [InlineData("vlc.exe", "video")]
     [InlineData("mpv.exe", "video")]
+    // macOS bundle id
+    [InlineData("com.apple.TV", "video")]
     public void Classifies_known_video_apps(string sourceApp, string expected)
     {
         Assert.Equal(expected, MediaSourceKindClassifier.Classify(sourceApp));
@@ -37,6 +42,10 @@ public class MediaSourceKindClassifierTests
     [InlineData("brave.exe", "browser")]
     [InlineData("vivaldi.exe", "browser")]
     [InlineData("opera.exe", "browser")]
+    // macOS bundle id
+    [InlineData("com.apple.Safari", "browser")]
+    [InlineData("com.microsoft.edgemac", "browser")]
+    [InlineData("company.thebrowser.Browser", "browser")]
     public void Classifies_browsers_as_browser(string sourceApp, string expected)
     {
         Assert.Equal(expected, MediaSourceKindClassifier.Classify(sourceApp));
@@ -65,5 +74,15 @@ public class MediaSourceKindClassifierTests
         Assert.Equal("video", MediaSourceKindClassifier.Classify("Microsoft.ZuneVideo_*"));
         // ZuneMusic は "music" 判定
         Assert.Equal("music", MediaSourceKindClassifier.Classify("Microsoft.ZuneMusic_*"));
+    }
+
+    [Fact]
+    public void Apple_music_matches_both_windows_and_macos_forms()
+    {
+        // Windows ストア版の "AppleMusic" と macOS の bundle id "com.apple.music" のどちらも music
+        Assert.Equal("music", MediaSourceKindClassifier.Classify("applemusic"));
+        Assert.Equal("music", MediaSourceKindClassifier.Classify("com.apple.music"));
+        // video 判定が先だが、いずれの音楽 bundle id も video の部分文字列には当たらない
+        Assert.Equal("video", MediaSourceKindClassifier.Classify("com.apple.TV"));
     }
 }

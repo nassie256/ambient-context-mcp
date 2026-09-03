@@ -22,7 +22,8 @@ public enum MediaSourceKindClassifier {
             lower.contains("disney") ||
             lower.contains("vlc") ||
             lower.contains("mpv") ||
-            lower.contains("mpc") {
+            lower.contains("mpc") ||
+            lower.contains("com.apple.tv") {
             return "video"
         }
 
@@ -33,7 +34,10 @@ public enum MediaSourceKindClassifier {
             lower.contains("amazonmusic") ||
             lower.contains("tidal") ||
             lower.contains("zunemusic") ||
-            lower.contains("youtubemusic") {
+            lower.contains("youtubemusic") ||
+            lower.contains("com.apple.music") ||
+            // Podcasts.app は音声再生専用なので music に寄せる (video/browser のどちらでもない)。
+            lower.contains("com.apple.podcasts") {
             return "music"
         }
 
@@ -43,7 +47,10 @@ public enum MediaSourceKindClassifier {
             lower.contains("firefox") ||
             lower.contains("opera") ||
             lower.contains("vivaldi") ||
-            lower.contains("brave") {
+            lower.contains("brave") ||
+            lower.contains("com.apple.safari") ||
+            lower.contains("com.microsoft.edgemac") ||
+            lower.contains("company.thebrowser.browser") {
             return "browser"
         }
 

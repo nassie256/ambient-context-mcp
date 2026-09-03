@@ -78,13 +78,13 @@
   {
     "name": "session_locked",
     "sensitivity": "medium",
-    "description": "Windows \u30BB\u30C3\u30B7\u30E7\u30F3\u304C\u30ED\u30C3\u30AF\u3055\u308C\u305F\u77AC\u9593\u3002Payload \u306A\u3057\u3002",
+    "description": "OS \u30BB\u30C3\u30B7\u30E7\u30F3\u304C\u30ED\u30C3\u30AF\u3055\u308C\u305F\u77AC\u9593\u3002Payload \u306A\u3057\u3002",
     "payloadKeys": []
   },
   {
     "name": "session_unlocked",
     "sensitivity": "medium",
-    "description": "Windows \u30BB\u30C3\u30B7\u30E7\u30F3\u304C\u30A2\u30F3\u30ED\u30C3\u30AF\u3055\u308C\u305F\u77AC\u9593\u3002Payload \u306A\u3057\u3002",
+    "description": "OS \u30BB\u30C3\u30B7\u30E7\u30F3\u304C\u30A2\u30F3\u30ED\u30C3\u30AF\u3055\u308C\u305F\u77AC\u9593\u3002Payload \u306A\u3057\u3002",
     "payloadKeys": []
   },
   {
@@ -340,7 +340,7 @@
   {
     "name": "power_setting_changed",
     "sensitivity": "low",
-    "description": "Windows power setting (AC/DC source, monitor power, lid switch \u306A\u3069) \u306E\u5909\u5316\u901A\u77E5\u3002",
+    "description": "OS \u306E\u96FB\u6E90\u8A2D\u5B9A (AC/DC source, monitor power, lid switch \u306A\u3069) \u306E\u5909\u5316\u901A\u77E5\u3002",
     "payloadKeys": [
       {
         "key": "setting",
@@ -351,7 +351,7 @@
       {
         "key": "guid",
         "sensitivity": "low",
-        "description": "Windows GUID \u8868\u8A18\u3002",
+        "description": "\u8A2D\u5B9A\u306E\u8B58\u5225\u5B50 (Windows: GUID \u8868\u8A18 / macOS: \u8A2D\u5B9A\u540D)\u3002",
         "example": "02731015-4510-4526-99e6-e5a17ebd1aea"
       },
       {
@@ -427,7 +427,7 @@
   {
     "name": "media_session_changed",
     "sensitivity": "medium",
-    "description": "Windows SMTC \u306E\u30E1\u30C7\u30A3\u30A2\u30BB\u30C3\u30B7\u30E7\u30F3\u60C5\u5831 (\u66F2\u30FB\u52D5\u753B\u30BF\u30A4\u30C8\u30EB\u7B49) \u304C\u5909\u308F\u3063\u305F\u77AC\u9593\u3002title / artist \u306F\u5225 path (.title / .artist) \u3067\u500B\u5225\u306B\u9AD8\u6A5F\u5FAE\u5206\u985E\u3055\u308C\u3066\u304A\u308A\u3001\u30E6\u30FC\u30B6\u30FC opt-in \u3068 context.high:read scope \u306E\u4E21\u65B9\u304C\u5FC5\u8981\u3002",
+    "description": "OS \u306E\u30E1\u30C7\u30A3\u30A2\u30BB\u30C3\u30B7\u30E7\u30F3\u60C5\u5831 (Windows: SMTC / macOS: Music\u30FBSpotify) \u306E\u5185\u5BB9 (\u66F2\u30FB\u52D5\u753B\u30BF\u30A4\u30C8\u30EB\u7B49) \u304C\u5909\u308F\u3063\u305F\u77AC\u9593\u3002title / artist \u306F\u5225 path (.title / .artist) \u3067\u500B\u5225\u306B\u9AD8\u6A5F\u5FAE\u5206\u985E\u3055\u308C\u3066\u304A\u308A\u3001\u30E6\u30FC\u30B6\u30FC opt-in \u3068 context.high:read scope \u306E\u4E21\u65B9\u304C\u5FC5\u8981\u3002",
     "payloadKeys": [
       {
         "key": "source_app",

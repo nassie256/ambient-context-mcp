@@ -70,7 +70,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 4 つのツールを�
     {
       "name": "media_session_changed",
       "sensitivity": "medium",
-      "description": "Windows SMTC のメディアセッション情報が変わった瞬間...",
+      "description": "OS のメディアセッション情報 (Windows: SMTC / macOS: Music・Spotify) の内容が変わった瞬間...",
       "payloadKeys": [
         { "key": "source_app", "sensitivity": "medium", "description": "再生元アプリの AppUserModelId。", "example": "Spotify.exe" },
         { "key": "playback_status", "sensitivity": "medium", "description": "Playing / Paused / Stopped。", "example": "Playing" },
