@@ -265,7 +265,7 @@ Phase 4 に持ち越した検証: 実 .app でのアクセシビリティ許可�
 
 ### Phase 4: アプリシェル
 
-- `NSStatusItem` + メニュー 8 項目 (状態表示 / 設定 / MCP URL コピー / Token コピー / Claude Code 用設定コピー / 一時停止・再開 / 終了)。アイコンはテンプレート画像でダーク・ライト両対応
+- `NSStatusItem` + メニュー 7 項目 (状態表示 / 設定 / MCP URL コピー / Token コピー / Claude Code 用設定コピー / 一時停止・再開 / 終了)。アイコンはテンプレート画像でダーク・ライト両対応
 - 設定ウィンドウ: 「MCP サーバ」タブ (状態、Endpoint、Token、ポート、ログイン時自動起動、イベント履歴永続化、言語) と「送信設定」タブ (全許可チェック、履歴保持時間・件数、グループ別オプション、機微度凡例)。保存時に `ReloadTransmissionPolicy` / `hub.ReloadSettings` / `mcpHost.ReloadSettings` を同順で呼ぶ
 - 権限誘導: `rawTitle` / `titleSummary` / `media.*` を ON にした時にシステム設定の該当ペインへ誘導するシートを出す。ここで Phase 0 から持ち越した「実 .app でのアクセシビリティ許可後のタイトル取得」「オートメーション初回プロンプト / 拒否時 -1743」を検証する
 - ウィンドウの実装要件 (PoC 4): `isReleasedWhenClosed = false` と `applicationShouldTerminateAfterLastWindowClosed → false` の両方が必要。`NSStatusItem` は AX 上 `menu bar 1` に現れる
@@ -304,13 +304,34 @@ Windows 版と macOS 版は別実装になるため、以下を CI で機械的�
 2. `get_states` の既定 (low のみ) 応答に `presence.bucket` / `battery.*` / `network.isAvailable` / `system.*` / `wellness.*` / `power.lastKnownSettings.*` が含まれる
 3. 送信設定でオプションを ON にすると対応 path が `get_policy.effectivePolicies` で `effectiveTransmit=true` になり、`policyVersion` が変わる
 4. `poll_events` の subscription / history query / cursorExpired / `includePayload=false` の各挙動が Windows 版と同じ
-5. トレイ (メニューバー) の左クリックで設定、右クリックでメニュー、8 項目すべて動作
+5. トレイ (メニューバー) の左クリックで設定、右クリックでメニュー、7 項目 (+ 区切り 3 本、Windows `TrayHost.cs` と同一集合) すべて動作
 6. ログイン時自動起動の ON/OFF がシステム設定「ログイン項目」に反映される
 7. 言語 ja / en / システム既定の切替が再起動後に反映される
 8. `events.jsonl` 永続化 ON/OFF の遷移 (OFF→ON で同期、ON→OFF で削除) が同じ
 9. アクセシビリティ / オートメーション権限が未許可でもクラッシュせず、該当項目が空で返る
 10. Claude Desktop に `.mcpb` をインストールすると、未起動時にメニューバーアプリが spawn され、ツールが応答する
 11. `swift test` で移植テストと契約フィクスチャ比較が全パス
+
+### 7.1 受け入れ確認の結果 (2026-09-03、画面ロック中の自動確認)
+
+| # | 結果 | 備考 |
+|---|---|---|
+| 1 | 合格 | `claude --mcp-config` で 4 ツール列挙 |
+| 2 | 合格 | 既定 scope で low 18 項目のみ |
+| 3 | 合格 (settings.json 経由) | `effectiveTransmit` / `policyVersion` の変化を確認。UI 操作は要人手 |
+| 4 | 合格 | subscription / 再取得の冪等性 / history query が cursor を進めない / 不正 cursor は無視 |
+| 5 | 一部合格 | 左クリック → 設定、メニュー構成、終了時の discovery 削除は確認。右クリックメニューの項目実行は AX から起動できず要人手 |
+| 6 | 要人手 | ログイン項目は UI 保存経由のみ |
+| 7 | 合格 | `ui.language` の en / システム既定 (ja) を診断ログで確認 |
+| 8 | 合格 (OFF→ON) / 要人手 (ON→OFF) | ON→OFF は live 保存時のみ (Windows と同じガード) |
+| 9 | 合格 | AX 未許可で `rawWindowTitle` / `titleSummary` が出ず稼働継続。ただし下記バグ 1 |
+| 10 | 合格 | ブリッジが同梱 .app を spawn し 1 秒で応答 |
+| 11 | 合格 | 146 テスト |
+
+受け入れ確認で見つかったバグ (Phase 6 で修正):
+1. **高**: `media.*` 初回 opt-in 時、オートメーション同意ダイアログが未解決の間 (画面ロック中は応答不能) にサービス actor が詰まり `get_states` と capture が数分停止する。候補プレイヤー確認の `MainActor.run` が復帰しないのが直接原因。App Nap 対策 (`ProcessInfo.beginActivity`) も未実装
+2. **中**: 設定ウィンドウが Accessibility API から見えない (`AXWindow` が列挙されない)
+3. **低**: `includePayload=false` で `payload` / `payloadSensitivity` が省略されず `{}` になる。Windows も同じ挙動で `docs/tool-spec.md` との不一致 (文書側を修正)
 
 ## 8. 既知の機能差 (ユーザ向けに明記するもの)
 
