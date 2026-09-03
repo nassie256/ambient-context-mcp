@@ -41,7 +41,7 @@ swift run ax-title-poc --prompt-ax     # AXIsProcessTrustedWithOptions(prompt: t
 ### 2.1 一発スナップショット (`swift run ax-title-poc`)
 
 ```json
-{"bundleIdentifier":null,"event":"startup","executablePath":"/Users/takumi/work/ambient-context-mcp/src/macos/poc/02-ax-title/.build/arm64-apple-macosx/debug/ax-title-poc","isAppBundle":false,"osVersion":"Version 26.6.2 (Build 25G83)","pid":15938,"ts":"2026-09-02T17:39:57.577Z"}
+{"bundleIdentifier":null,"event":"startup","executablePath":"<repo>/src/macos/poc/02-ax-title/.build/arm64-apple-macosx/debug/ax-title-poc","isAppBundle":false,"osVersion":"Version 26.6.2 (Build 25G83)","pid":15938,"ts":"2026-09-02T17:39:57.577Z"}
 {"api":"AXIsProcessTrustedWithOptions(kAXTrustedCheckOptionPrompt: false)","event":"accessibility_check","trusted":false,"ts":"2026-09-02T17:39:57.593Z"}
 {"accessibilityTrusted":false,"appName":"UserNotificationCenter","available":true,"bundleIdentifier":"com.apple.UserNotificationCenter","category":"other","event":"snapshot","hasWindowTitle":false,"idleSeconds":17.978999999999999,"label":"initial","localizedName":"UserNotificationCenter","presenceBucket":"idle","processId":2660,"processName":"UserNotificationCenter","rawWindowTitle":"","titleReason":"accessibility_not_trusted","ts":"2026-09-02T17:39:57.612Z"}
 ```

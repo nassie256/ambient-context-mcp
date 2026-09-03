@@ -164,7 +164,7 @@ menu items=["Ambient Context MCP — :37690 (一時停止中)", "", "設定", ""
 
 ```swift
 let mainPath = Bundle.main.bundleURL.appendingPathComponent("AmbientPocApp_AmbientPocApp.bundle").path
-let buildPath = "/Users/takumi/.../.build/arm64-apple-macosx/release/AmbientPocApp_AmbientPocApp.bundle"
+let buildPath = "<repo>/.build/arm64-apple-macosx/release/AmbientPocApp_AmbientPocApp.bundle"
 guard let bundle = Bundle(path: mainPath) ?? Bundle(path: buildPath) else { fatalError(...) }
 ```
 
