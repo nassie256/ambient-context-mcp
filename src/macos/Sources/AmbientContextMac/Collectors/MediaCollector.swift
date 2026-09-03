@@ -20,6 +20,19 @@ public struct MediaCollector: Sendable {
     /// Windows 版 `MediaApiTimeout` と同値。
     public static let scriptTimeout: TimeInterval = 1.5
 
+    /// `collect()` 全体の上限 (スクリプトガード 1500 ms + 余裕)。
+    ///
+    /// 受け入れ確認のバグ 1 (設計書 §7.1): オートメーション同意ダイアログが未解決の間
+    /// (画面ロック中は応答不能)、メディア収集が呼び出し元 = サービス actor を数分間
+    /// 詰まらせた。個々の AppleScript にガードがあっても「候補列挙 → 複数プレイヤーの
+    /// プローブ」の合計が伸びうるので、collect 全体にも締切を置く。
+    /// 締切超過時は直近の既知の値 + `error` を返し、下位のワーカーは走らせたままにする
+    /// (結果は次回の collect で拾う)。
+    public static let collectDeadline: TimeInterval = 2.5
+
+    /// 締切超過時に `MediaContext.error` へ入れる文字列 (診断ログの event 名と対にする)。
+    public static let timeoutError = "media collect timed out"
+
     /// 問い合わせ対象プレイヤー。
     public struct PlayerCandidate: Sendable, Hashable {
         public var bundleId: String
@@ -66,8 +79,25 @@ public struct MediaCollector: Sendable {
     ///
     /// 呼び出し元の actor / MainActor をブロックしないよう、AppleScript は必ず
     /// 常駐の直列ワーカースレッドで実行し `withCheckedContinuation` で待つ。
+    ///
+    /// **呼び出し元 actor を `collectDeadline` より長く止めない。** 収集本体は切り離した
+    /// タスクで走らせ、締切に達したら直近の既知の値を返して先に進む。
     public func collect() async -> MediaContext {
-        let running = await MainActor.run { Self.runningCandidates(self.candidates) }
+        let candidates = self.candidates
+        let collected = await BoundedWork.run(seconds: Self.collectDeadline) {
+            await Self.collectWithoutDeadline(candidates)
+        }
+        if let collected { return collected }
+
+        AppDiagnosticLog.shared.log(
+            category: "media", event: "collect_timed_out",
+            detail: ["deadlineMs": .int(Int(Self.collectDeadline * 1000))])
+        return Self.lastKnownContext(candidates: candidates, error: Self.timeoutError)
+    }
+
+    /// 締切を掛けない収集本体 (`collect()` からのみ呼ぶ)。
+    static func collectWithoutDeadline(_ candidates: [PlayerCandidate]) async -> MediaContext {
+        let running = runningCandidates(candidates)
         guard !running.isEmpty else {
             return MediaContext(error: "no supported media player running")
         }
@@ -124,12 +154,48 @@ public struct MediaCollector: Sendable {
             error: selected.error)
     }
 
-    /// 起動中のプレイヤーだけを返す (`NSRunningApplication` は MainActor API)。
-    @MainActor
+    /// 起動中のプレイヤーだけを返す。
+    ///
+    /// `NSRunningApplication.runningApplications(withBundleIdentifier:)` は
+    /// **メインスレッド専用ではない** (LaunchServices への問い合わせで、Sendable な値を返す)。
+    /// 以前はここで `MainActor.run` していたため、同意ダイアログ等でメインの run loop が
+    /// 詰まると呼び出し元 actor もろとも止まっていた (設計書 §7.1 バグ 1)。MainActor へは
+    /// **ホップしない**。
     static func runningCandidates(_ candidates: [PlayerCandidate]) -> [PlayerCandidate] {
         candidates.filter {
             !NSRunningApplication.runningApplications(withBundleIdentifier: $0.bundleId).isEmpty
         }
+    }
+
+    /// 締切超過時に返す「直近の既知の値」。プローブ結果が 1 件も無ければ error だけを返す。
+    static func lastKnownContext(candidates: [PlayerCandidate], error: String) -> MediaContext {
+        var sessions = candidates.compactMap { MediaProbeRegistry.shared.lastKnown(bundleId: $0.bundleId) }
+        guard !sessions.isEmpty else { return MediaContext(error: error) }
+
+        let selectedIndex = sessions.firstIndex(where: { $0.isPlaying }) ?? 0
+        sessions = sessions.enumerated().map { index, session in
+            var copy = session
+            copy.selected = index == selectedIndex
+            return copy
+        }
+        let selected = sessions[selectedIndex]
+        guard selected.playbackStatus != "unknown" else {
+            return MediaContext(sessions: sessions, error: error)
+        }
+        return MediaContext(
+            isAvailable: true,
+            sourceAppUserModelId: selected.sourceAppUserModelId,
+            playbackStatus: selected.playbackStatus,
+            isPlaying: selected.isPlaying,
+            title: selected.title,
+            artist: selected.artist,
+            albumTitle: selected.albumTitle,
+            positionMilliseconds: selected.positionMilliseconds,
+            endTimeMilliseconds: selected.endTimeMilliseconds,
+            timelineLastUpdatedAt: Date(),
+            sessions: sessions,
+            // 直近の値であることが分かるよう、締切超過の理由で上書きする。
+            error: error)
     }
 
     // MARK: - AppleScript
@@ -186,7 +252,8 @@ public struct MediaCollector: Sendable {
         onWorkerFinished: @escaping @Sendable () -> Void = {}
     ) async -> ScriptResult? {
         await withCheckedContinuation { (continuation: CheckedContinuation<ScriptResult?, Never>) in
-            let resumed = ResumeOnce(continuation)
+            let resumed = ResumeOnceBox<ScriptResult?>()
+            resumed.attach(continuation)
 
             AppleScriptWorker.shared.submit {
                 let output = Self.execute(source)
@@ -226,24 +293,6 @@ public struct MediaCollector: Sendable {
             output.errorMessage = "unexpected AppleScript result shape"
         }
         return output
-    }
-
-    /// 継続を高々 1 回だけ再開するためのラッパ (スレッド完了とタイムアウトの競合を吸収する)。
-    private final class ResumeOnce: @unchecked Sendable {
-        private let lock = NSLock()
-        private var continuation: CheckedContinuation<ScriptResult?, Never>?
-
-        init(_ continuation: CheckedContinuation<ScriptResult?, Never>) {
-            self.continuation = continuation
-        }
-
-        func resume(with value: ScriptResult?) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            lock.unlock()
-            pending?.resume(returning: value)
-        }
     }
 
     static func item(_ list: NSAppleEventDescriptor, _ index: Int) -> String {
@@ -416,5 +465,87 @@ final class MediaProbeRegistry: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return inFlight.contains(bundleId)
+    }
+}
+
+/// 継続を高々 1 回だけ再開するための汎用ラッパ。
+/// 「本処理の完了」と「締切 / キャンセル」の競合を吸収する。
+/// 継続を貼る前に決着したときは値を保持し、`attach` の時点で即座に再開する。
+final class ResumeOnceBox<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Value, Never>?
+    private var pending: Value?
+    private var finished = false
+
+    init() {}
+
+    func attach(_ continuation: CheckedContinuation<Value, Never>) {
+        lock.lock()
+        if finished {
+            let value = pending
+            pending = nil
+            lock.unlock()
+            if let value { continuation.resume(returning: value) }
+            return
+        }
+        self.continuation = continuation
+        lock.unlock()
+    }
+
+    func resume(with value: Value) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            return
+        }
+        finished = true
+        let waiting = continuation
+        continuation = nil
+        if waiting == nil { pending = value }
+        lock.unlock()
+        waiting?.resume(returning: value)
+    }
+}
+
+/// 「呼び出し元 (actor / MainActor) を締切より長く止めない」ための実行ヘルパ。
+///
+/// 設計書 §7.1 バグ 1 の再発防止。処理は切り離したタスクで走らせ、締切に達したら
+/// 呼び出し元だけが先に進む。**下位の処理 (NSAppleScript ワーカー / AX 呼び出し) は
+/// キャンセルを観測しないのでそのまま走り続け**、結果は次回の収集で拾われる。
+/// これは意図した設計で、刺さった Apple Event を強制中断する API は無い。
+enum BoundedWork {
+    /// - Returns: `seconds` 以内に完了すればその結果、超過 / キャンセル時は nil。
+    static func run<Value: Sendable>(
+        seconds: TimeInterval,
+        operation: @escaping @Sendable () async -> Value
+    ) async -> Value? {
+        let box = ResumeOnceBox<Value?>()
+
+        // 締切は独立したタイマーで測る。切り離したタスクが再開しなくても必ず発火する。
+        // `.strict` はタイマーの合体と App Nap による遅延を禁止する。既定の
+        // `asyncAfter` は実測で締切の 6〜7% 遅れて発火し、2.5 s が 2.67 s になっていた。
+        let timer = DispatchSource.makeTimerSource(
+            flags: [.strict], queue: DispatchQueue.global(qos: .userInitiated))
+        timer.schedule(deadline: .now() + seconds, leeway: .milliseconds(5))
+        timer.setEventHandler {
+            timer.cancel()  // 発火は 1 回だけ。ハンドラ内の強参照はここで切れる。
+            box.resume(with: Value?.none)
+        }
+        timer.resume()
+
+        let work = Task.detached(priority: .utility) {
+            let value = await operation()
+            timer.cancel()  // 締切前に終わったのでタイマーは不要。
+            box.resume(with: value)
+        }
+
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Value?, Never>) in
+                box.attach(continuation)
+            }
+        } onCancel: {
+            work.cancel()
+            box.resume(with: Value?.none)
+        }
     }
 }

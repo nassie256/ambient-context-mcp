@@ -22,6 +22,17 @@ public actor MacAmbientContextService {
     /// 遅い capture として診断ログに残すしきい値 (C# と同値)。
     private static let slowCaptureMilliseconds = 2000.0
 
+    /// MainActor 上の収集 (ForegroundAppCollector / DisplayCollector) の締切。
+    ///
+    /// 設計書 §7.1 バグ 1: モーダルや TCC の同意ダイアログが出ている間、メインの run loop は
+    /// 進まない。AX 呼び出し自体にメッセージングタイムアウトを掛けても、そもそも MainActor に
+    /// ホップできなければ意味が無いので、**ホップ自体に締切を置く**。超過時は直近の既知の値
+    /// (無ければ空) で degrade して capture を完了させる。
+    private static let mainActorCollectDeadline: TimeInterval = 2.0
+
+    /// 定期 capture の間隔がこの秒数以上空いたら診断ログに残す (App Nap / スリープ / 詰まりの検知)。
+    private static let cadenceDriftSeconds: Double = 90
+
     private let settingsStore: any SettingsStore
     private let snapshotWriter: AmbientSnapshotWriter
     private let snapshotPathValue: String
@@ -55,6 +66,13 @@ public actor MacAmbientContextService {
 
     /// 直近の送信用スナップショット。
     public private(set) var latestSnapshot = AmbientContextSnapshot()
+
+    /// MainActor 収集が締切超過したときに使う直近の既知の値。
+    private var lastForegroundApp = ForegroundAppContext()
+    private var lastDisplays: [DisplayContext] = []
+
+    /// 直近の定期 capture の要求時刻 (cadence drift の計測用)。
+    private var lastPeriodicCaptureAt: Date?
 
     public init(settingsStore: any SettingsStore, snapshotPath: String? = nil) {
         self.settingsStore = settingsStore
@@ -155,7 +173,25 @@ public actor MacAmbientContextService {
     /// 定期 capture (60 秒) の受け口。
     public func requestPeriodicCapture() async {
         guard started else { return }
+        recordPeriodicCadence(at: Date())
         await captureAndStore(reason: "timer")
+    }
+
+    /// 定期 capture の到着間隔を見て、`cadenceDriftSeconds` 以上空いていたら記録する。
+    /// App Nap でタイマーが間引かれた / capture が詰まっていた / スリープしていた、の
+    /// いずれかを後から切り分けるための手掛かり (設計書 §7.1 バグ 1-d)。
+    private func recordPeriodicCadence(at now: Date) {
+        defer { lastPeriodicCaptureAt = now }
+        guard let previous = lastPeriodicCaptureAt else { return }
+        let elapsed = now.timeIntervalSince(previous)
+        guard elapsed >= Self.cadenceDriftSeconds else { return }
+        AppDiagnosticLog.shared.log(
+            category: "capture",
+            event: "cadence_drift",
+            detail: [
+                "elapsedSeconds": .int(Int(elapsed.rounded())),
+                "intervalSeconds": .int(Self.captureIntervalSeconds)
+            ])
     }
 
     /// 設定保存後に呼ぶ。ポリシーと収集可否フラグを読み直して 1 回 capture する。
@@ -271,9 +307,12 @@ public actor MacAmbientContextService {
         let presence = presenceCollector.collect(sessionLocked: evaluator.sessionLocked)
 
         let titleEnabled = titleCaptureEnabled
-        let foreground = await MainActor.run {
+        // MainActor へのホップにも締切を掛ける。同意ダイアログや応答しないアプリで
+        // メインの run loop が止まっても、capture (と get_states) は先へ進む。
+        let foreground = await boundedOnMainActor(collector: "foreground_app", fallback: lastForegroundApp) {
             ForegroundAppCollector().collect(titleCaptureEnabled: titleEnabled)
         }
+        lastForegroundApp = foreground
 
         let battery = batteryCollector.collect()
         let network = networkCollector.collect()
@@ -284,7 +323,10 @@ public actor MacAmbientContextService {
             : MediaContext(error: "media capture disabled by transmission policy")
         let system = systemCollector.collect(now: observedAt)
         let systemLoad = systemLoadCollector.collect()
-        let displays = await MainActor.run { DisplayCollector().collect() }
+        let displays = await boundedOnMainActor(collector: "displays", fallback: lastDisplays) {
+            DisplayCollector().collect()
+        }
+        lastDisplays = displays
 
         // Windows は OS が個別に push してくる電源設定を、macOS では毎 capture 読み直す。
         // `recordPowerSetting` は初期化フェーズ後は**呼ぶたびに** power_setting_changed を出す
@@ -317,6 +359,28 @@ public actor MacAmbientContextService {
             displays: displays,
             privacyClassifications: privacyClassifications,
             transmissionPolicy: transmissionPolicy)
+    }
+
+    /// MainActor 上の収集を `mainActorCollectDeadline` で打ち切る。
+    /// 超過したら直近の既知の値 (無ければ空) を返し、診断ログに残す。
+    /// 遅れて到着した MainActor の実行結果は捨てる (次の capture で取り直す)。
+    private func boundedOnMainActor<Value: Sendable>(
+        collector: String,
+        fallback: Value,
+        _ work: @escaping @MainActor @Sendable () -> Value
+    ) async -> Value {
+        let value = await BoundedWork.run(seconds: Self.mainActorCollectDeadline) {
+            await MainActor.run { work() }
+        }
+        if let value { return value }
+        AppDiagnosticLog.shared.log(
+            category: "capture",
+            event: "collector_timed_out",
+            detail: [
+                "collector": .string(collector),
+                "deadlineMs": .int(Int(Self.mainActorCollectDeadline * 1000))
+            ])
+        return fallback
     }
 
     // MARK: - capture ゲート

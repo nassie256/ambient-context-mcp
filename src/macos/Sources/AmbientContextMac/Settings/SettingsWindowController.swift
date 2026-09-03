@@ -47,6 +47,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// 保存していない編集が残り、Windows と挙動が食い違う。
     func show() {
         AppDiagnosticLog.shared.log(category: "tray", event: "open_settings_requested")
+        beginForegroundPresentation()
         if let window {
             model?.reload()
             window.makeKeyAndOrderFront(nil)
@@ -105,8 +106,39 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model = nil
     }
 
+    /// 設定ウィンドウを開いている間だけ「通常のアプリ」になる (設計書 §7.1 バグ 2)。
+    ///
+    /// `.accessory` のままだと、ウィンドウを出しても **アプリはアクティブになれない**
+    /// (`NSApp.activate` も System Events の `set frontmost` も効かない)。その結果
+    /// Accessibility API から見ると `frontmost: false` で、ウィンドウが列挙できたり
+    /// できなかったりし、SwiftUI 側の AX 属性 (ボタン名など) も埋まらないため
+    /// `click button "保存"` のような AX 操作が一切通らなかった。
+    ///
+    /// メニューバー常駐アプリで設定ウィンドウを持つときの定番の回避策として、
+    /// **ウィンドウが開いている間だけ `.regular`** に切り替え、閉じたら `.accessory` に戻す。
+    /// 開いている間は Dock アイコンと通常のアプリメニューが出る (許容する差分。README/
+    /// 設計書に明記)。常駐そのものは `applicationShouldTerminateAfterLastWindowClosed` が
+    /// false なので影響を受けない。
+    private func beginForegroundPresentation() {
+        guard NSApp.activationPolicy() != .regular else { return }
+        NSApp.setActivationPolicy(.regular)
+        AppDiagnosticLog.shared.log(
+            category: "settings", event: "activation_policy",
+            detail: ["policy": .string("regular")])
+    }
+
+    /// ウィンドウを閉じたら常駐アプリ (Dock に出ない) に戻す。
+    private func endForegroundPresentation() {
+        guard NSApp.activationPolicy() != .accessory else { return }
+        NSApp.setActivationPolicy(.accessory)
+        AppDiagnosticLog.shared.log(
+            category: "settings", event: "activation_policy",
+            detail: ["policy": .string("accessory")])
+    }
+
     func windowWillClose(_ notification: Notification) {
         AppDiagnosticLog.shared.log(category: "settings", event: "window_closing")
+        endForegroundPresentation()
         // .accessory なのでウィンドウを閉じてもアプリは常駐し続ける。
         // インスタンスは保持し、次回 show() で同じウィンドウ (と位置) を再表示する。
         // 未保存の編集は次の show() の reload() で捨てる (C# の作り直しと同じ結果)。

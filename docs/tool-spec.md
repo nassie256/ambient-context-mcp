@@ -136,7 +136,7 @@ Ambient Context MCP は Streamable HTTP MCP transport で 4 つのツールを�
 - `names` 任意。省略時は許可済み全イベント
 - `limit` 既定 50、最大 1000
 - `since` / `until` 任意。ISO 8601 (例: `2026-05-10T00:00:00+09:00`)。指定すると ObservedAt が範囲内のイベントだけを返す
-- `includePayload` 任意 (既定 true)。`false` を渡すと各イベントから `payload` / `payloadSensitivity` を取り除いた要約形式で返る。大量取得時のレスポンスサイズ削減用
+- `includePayload` 任意 (既定 true)。`false` を渡すと各イベントの `payload` / `payloadSensitivity` が**空オブジェクト `{}`** になった要約形式で返る (キー自体は残る。Windows / macOS とも同じ挙動)。大量取得時のレスポンスサイズ削減用
 
 **Output**:
 

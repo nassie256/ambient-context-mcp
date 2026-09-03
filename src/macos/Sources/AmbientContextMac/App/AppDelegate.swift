@@ -25,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let pauseFlag = PauseFlag()
     private var signalSources: [DispatchSourceSignal] = []
     private var shuttingDown = false
+    /// App Nap 抑止トークン。プロセスの生存期間ずっと保持する (解放すると App Nap が戻る)。
+    private var activityToken: NSObjectProtocol?
 
     // MARK: - 起動
 
@@ -33,6 +35,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settingsPath = ProcessInfo.processInfo.environment["AMBIENT_SETTINGS"]
         let store = JsonFileSettingsStore(path: settingsPath)
         settingsStore = store
+
+        // App Nap 抑止 (設計書 §7.1 バグ 1-d)。ウィンドウを持たない .accessory アプリは
+        // App Nap の対象になりやすく、60 秒周期の capture が数分単位に間引かれる。
+        // `.background` は「ユーザに見えない継続的な作業がある」という宣言で、
+        // タイマーの合体と App Nap を止める。スリープ自体は抑止しない
+        // (`.idleSystemSleepDisabled` などは付けない: 常駐ツールがスリープを妨げるべきでない)。
+        // Info.plist の NSAppSleepDisabled は同じ意図の静的な保険 (scripts/build-app.sh)。
+        activityToken = ProcessInfo.processInfo.beginActivity(
+            options: [.background], reason: "Ambient context capture")
 
         AppDiagnosticLog.shared.configure(settingsPath: store.settingsPath)
         AppDiagnosticLog.shared.log(

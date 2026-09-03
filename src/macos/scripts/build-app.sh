@@ -179,6 +179,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSUIElement</key><true/>
+  <!-- App Nap を無効化する (設計書 §7.1 バグ 1-d)。ウィンドウを持たない常駐アプリは
+       App Nap の対象になりやすく、60 秒周期の capture が数分単位に間引かれていた。
+       AppDelegate の ProcessInfo.beginActivity(.background) と同じ意図で、
+       こちらは起動前から効く静的な宣言。 -->
+  <key>NSAppSleepDisabled</key><true/>
   <key>LSMinimumSystemVersion</key><string>$DEPLOYMENT_TARGET</string>
   <key>NSHumanReadableCopyright</key><string>Copyright (c) 2026 nassie256. MIT License.</string>
   <key>NSAppleEventsUsageDescription</key><string>「メディア」のコンテキストを有効にしたときだけ、再生中の曲を Music / Spotify から読み取ります。 / Ambient Context MCP reads the now-playing track from Music and Spotify, only while you enable the media context.</string>
